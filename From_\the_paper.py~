@@ -1,0 +1,159 @@
+# -*- coding: utf-8 -*-
+# <nbformat>3.0</nbformat>
+
+# <codecell>
+
+#Import the required modules
+from dolfin import *
+import numpy as np
+
+# <codecell>
+
+#The mesh used for the rectangular hollow guides
+a = 1.0
+b = 0.5
+
+# <codecell>
+
+#Create a rectancular mesh with origin (0,0) extending to (a,b) with 8 edges along the long side and 4 elements along the short side
+mesh =RectangleMesh(0,0,a,b,8,4)
+
+# <codecell>
+
+#define the orders of the fucntion spaces for vector and nodal basis functions
+vector_order = 2
+nodal_order = 3
+
+# <codecell>
+
+#define the function spaces
+vector_space = FunctionSpace(mesh,"Nedelec 1st kind H(curl)",vector_order)
+nodal_space = FunctionSpace(mesh,"Lagrange",nodal_order)
+combined_space = vector_space*nodal_space
+
+# <codecell>
+
+#Define the test and trial functions from the combined space
+# here N_v and N_u are Nedelec basis functions and L_v and L_u are Lagrange basis functions
+(N_i,L_i) = TestFunctions(combined_space)
+(N_j,L_j) = TrialFunctions(combined_space)
+
+# <codecell>
+
+#specify the relative permittivity and permeability
+e_r = 1.0
+u_r = 1.0
+
+# <codecell>
+
+def curl_t(w):
+    return Dx(w[1], 0) - Dx(w[0], 1)
+
+# <codecell>
+
+#define the forms (matrix elements) for cutoff analysis into the basis fnctions
+s_tt_ij = 1.0/u_r*inner(curl_t(N_i),curl_t(N_j))
+t_tt_ij = e_r*inner(N_i,N_j)
+s_zz_ij = 1.0/u_r * inner(grad(L_i),grad(L_j))
+t_zz_ij = e_r*L_i*L_j
+#post-multiplication by dx will result in integration over the domain of the mesh at assembly time
+s_ij =(s_tt_ij+s_zz_ij)*dx
+t_ij = (t_tt_ij+t_zz_ij)*dx
+
+# <codecell>
+
+#assemble the sysstem Matrices. DOLFIN automtically evaluates each of the forms for all the 
+#relavent test and tial functions combnatuoins ie piossible valies of i and j
+S = assemble(s_ij)
+T = assemble(t_ij)
+
+# <codecell>
+
+#create a mesh function to mark the edges(dimension 1) in the mesh
+boundary_markers = MeshFunction('uint',mesh,1)
+#mark all edges as 0
+boundary_markers.set_all(0)
+#mark the edges on the boundary as 1
+DomainBoundary().mark(boundary_markers,1)
+
+# <codecell>
+
+#create the boundary condition using the combined function space, a zero Expression, and the mesh function
+#for the edges. Note that the last parameter (1) is used to indicate the edges where the boundary condition must be applied
+electric_wall = DirichletBC(combined_space,Expression(("0.0","0.0","0.0")),boundary_markers,1)
+#apply the boundary condition to the assembled matrices
+electric_wall.apply(S)
+electric_wall.apply(T)
+
+# <codecell>
+
+#initialise a vector of ones
+indicators = np.ones(S.size(0))
+#get the boundary indictators to remove the rows and colums associated with the boundary DOFs
+indicators[electric_wall.get_boundary_values().keys()]=0
+#the free DOFs correspond to the elements of indicators that are equal to 1
+free_dofs = np.where(indicators == 1)[0]
+#convert the dolfin matrices to numpy arrays selecting only the rows and colums associated with the free DOFs
+S_np = S.array()[free_dofs,:][:,free_dofs]
+T_np = T.array()[free_dofs,:][:,free_dofs]
+
+# <codecell>
+
+#solve the eigensystem (S_np,T_np) using scipy)]
+from scipy.linalg import eig
+k_c_squared,ev = eig(S_np,T_np)
+#sort the calculated values
+sort_index = np.argsort(k_c_squared)
+#skip over the non-physical(zero) eigenmodes
+first_mode_idx = np.where(k_c_squared[sort_index]>1e-8)[0][0]
+
+# <codecell>
+
+print("The cutoff wavenumbers of the 4 most dominant modes are:")
+print(k_c_squared[sort_index][first_mode_idx:first_mode_idx+4])
+
+# <codecell>
+
+#TE_10 mode is the first mode
+mode_idx = 0
+#post-process the coefficients to map back to the full matrix
+coefficiants_global = np.zeros(S.size(0))
+coefficiants_global[free_dofs] = ev[:,sort_index[first_mode_idx+mode_idx]]
+#Create a Function on the combined space
+mode = Function(combined_space)
+#Assign the coefficients of the function to the calculated values
+mode.vector().set_local(coefficiants_global)
+#Split the function into the parts in each of the functions spaces in combined_space
+#This is done using DOLFINs Function.split()
+(TE,TM) = mode.split()
+#Plot the mode using the dolfin plotter
+
+# <codecell>
+
+plot(TE,title = "TE_10 mode")
+interactive()
+
+# <codecell>
+
+#TE_10 mode is the first mode
+mode_idx = 3
+#post-process the coefficients to map back to the full matrix
+coefficiants_global = np.zeros(S.size(0))
+coefficiants_global[free_dofs] = ev[:,sort_index[first_mode_idx+mode_idx]]
+#Create a Function on the combined space
+mode = Function(combined_space)
+#Assign the coefficients of the function to the calculated values
+mode.vector().set_local(coefficiants_global)
+#Split the function into the parts in each of the functions spaces in combined_space
+#This is done using DOLFINs Function.split()
+(TE,TM) = mode.split()
+#Plot the mode using the dolfin plotter
+
+# <codecell>
+
+plot(TM,title="TM_11 mode")
+interactive()
+
+# <codecell>
+
+
