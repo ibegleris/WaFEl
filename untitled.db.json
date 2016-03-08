@@ -1,0 +1,15 @@
+{ "onelab":{
+  "creator":"",
+  "date":"Tue Mar  8 15:12:05 2016",
+  "parameters":[ 
+    { "type":"number", "version":"1.1", "name":"0Metamodel/Loop", "label":"", "help":"", "neverChanged":false", "visible":false", "readOnly":false", "attributes":{  }, "clients":{  }, "value":0, "min":-1e+200, "max":1e+200, "step":0, "index":-1, "choices":[  ], "valueLabels":{  } }
+    { "type":"string", "version":"1.1", "name":"Gmsh/Action", "label":"", "help":"", "neverChanged":true", "visible":false", "readOnly":false", "attributes":{  }, "clients":{ "Gmsh":false }, "value":"", "kind":"generic", "choices":[  ] }
+    { "type":"number", "version":"1.1", "name":"Gmsh/Model dimension", "label":"", "help":"", "neverChanged":false", "visible":false", "readOnly":true", "attributes":{ "Closed":"1" }, "clients":{ "Gmsh":false }, "value":2, "min":-1e+200, "max":1e+200, "step":0, "index":-1, "choices":[  ], "valueLabels":{  } }
+    { "type":"string", "version":"1.1", "name":"Gmsh/Model name", "label":"", "help":"", "neverChanged":true", "visible":false", "readOnly":true", "attributes":{  }, "clients":{ "Gmsh":false }, "value":"untitled.geo", "kind":"generic", "choices":[  ] }
+    { "type":"string", "version":"1.1", "name":"Gmsh/MshFileName", "label":"Mesh name", "help":"", "neverChanged":false", "visible":true", "readOnly":false", "attributes":{ "Closed":"1" }, "clients":{ "Gmsh":false }, "value":"untitled.msh", "kind":"file", "choices":[  ] }
+    { "type":"number", "version":"1.1", "name":"Gmsh/Number of physical groups", "label":"", "help":"", "neverChanged":false", "visible":false", "readOnly":true", "attributes":{ "Closed":"1" }, "clients":{ "Gmsh":false }, "value":0, "min":-1e+200, "max":1e+200, "step":0, "index":-1, "choices":[  ], "valueLabels":{  } }
+    { "type":"number", "version":"1.1", "name":"a", "label":"", "help":"", "neverChanged":false", "visible":true", "readOnly":false", "attributes":{  }, "clients":{ "Gmsh":false }, "value":0.0002, "min":1e-05, "max":0.004, "step":3.990000000000001e-05, "index":-1, "choices":[  ], "valueLabels":{  } }
+    { "type":"number", "version":"1.1", "name":"b", "label":"", "help":"", "neverChanged":false", "visible":true", "readOnly":false", "attributes":{  }, "clients":{ "Gmsh":false }, "value":0.0002, "min":1e-05, "max":0.004, "step":3.990000000000001e-05, "index":-1, "choices":[  ], "valueLabels":{  } }
+    { "type":"number", "version":"1.1", "name":"r_clad", "label":"", "help":"", "neverChanged":false", "visible":true", "readOnly":false", "attributes":{  }, "clients":{ "Gmsh":false }, "value":3e-05, "min":1.5e-06, "max":0.0006000000000000001, "step":5.985000000000001e-06, "index":-1, "choices":[  ], "valueLabels":{  } }
+    { "type":"number", "version":"1.1", "name":"r_core", "label":"", "help":"", "neverChanged":false", "visible":true", "readOnly":false", "attributes":{  }, "clients":{ "Gmsh":false }, "value":1e-05, "min":5.000000000000001e-07, "max":0.0002, "step":1.995e-06, "index":-1, "choices":[  ], "valueLabels":{  } }
+] }
