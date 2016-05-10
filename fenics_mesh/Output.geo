@@ -1,7 +1,7 @@
 DefineConstant[ a = { 0.0003, Path "Gmsh/Parameters"}];
 DefineConstant[ b = { 0.0003, Path "Gmsh/Parameters"}];
 DefineConstant[ r_core = { 1e-05, Path "Gmsh/Parameters"}];
-DefineConstant[ r_clad = { 2e-05, Path "Gmsh/Parameters"}];
+DefineConstant[ r_clad = { 0.0001, Path "Gmsh/Parameters"}];
 Point(1) = {-a, -b, 0, 1.0};
 Point(2) = {a, -b, 0, 1.0};
 Point(3) = {a, b, 0, 1.0};
