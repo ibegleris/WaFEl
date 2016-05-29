@@ -43,26 +43,27 @@ def gmesh_mesh(filename,a,b,r_core,r_clad,mesh_refinement):
     return mesh
 
 
-def goemetry_plot(x,y,a,b,ref,extinction,nclad,ncore):
+def goemetry_plot(x,y,a,b,ref,extinction,nclad,ncore,r_core,r_clad):
 
     X,Y = np.meshgrid(x,y)
     n_plot = np.zeros(np.shape(X))
     k_plot = np.zeros(np.shape(X))
     for i,xx in enumerate(x):
         for j,yy in enumerate(y):
-            n_plot[i,j] = ref([xx,yy])
-            k_plot[i,j] = extinction([xx,yy])
+            n_plot[i,j] = ref([xx,yy])*10000000
+            k_plot[i,j] = extinction([xx,yy])*10000000
 
-    cmap1, norm1 = from_levels_and_colors([1,nclad.real,ncore.real], ['red', 'blue', 'green'],extend='max')
-    cmap2, norm2 = from_levels_and_colors([0,nclad.imag*nclad.real,ncore.imag*ncore.real], ['red', 'blue', 'green'],extend='max')
+    cmap1, norm1 = from_levels_and_colors([1,ref([r_core,0])*10000000,ref([r_clad,0])*10000000], ['blue', 'green','red'],extend='max')
+    cmap2, norm2 = from_levels_and_colors([0,extinction([r_core,0])*10000000,extinction([r_clad,0])*10000000],  ['blue', 'green','red'],extend='max')
 
     fig = plt.figure(figsize=(20.0, 20.0))
     ax1 = fig.add_subplot(221)
-    ax1.pcolormesh(X,Y,n_plot**0.5, cmap=cmap1, norm=norm1)
+    ax1.pcolormesh(X,Y,n_plot, cmap=cmap1, norm=norm1)
     ax1.set_title('real part profile')
     ax1.axis('equal')
+    
     ax2 = fig.add_subplot(222)
-    ax2.pcolormesh(X,Y,k_plot)#, cmap=cmap1, norm=norm1)
+    ax2.pcolormesh(X,Y,k_plot, cmap=cmap2, norm=norm2)
     ax2.set_title('Imaginary part  profile')
     ax2.axis('equal')
     return n_plot,k_plot
@@ -98,54 +99,8 @@ def csr_creation(A,B,free_dofs):
 
 
 
-def electric_field_full(mode_idx,x,y,k,A,ev,sort_index,free_dofs,combined_space):
-    """
-    Releases the electric field from the calculated eigenvalus and eigen vectors
-    
-    Returns::
-    E[size,size,2],E_axial(Ez)
-    """
-
-    #post-process the coefficients to map back to the full matrix
-    coefficiants_global = np.zeros(A.size(0),dtype=np.complex)
-    coefficiants_global[free_dofs] = ev[:,sort_index[mode_idx]]
-    #Create a Function on the combined space
-    mode_re = Function(combined_space)
-    mode_im = Function(combined_space)
-    #Assign the coefficients of the function to the calculated values
-    mode_re.vector().set_local(np.real(coefficiants_global))
-    mode_im.vector().set_local(np.imag(coefficiants_global))
-    #Split the function into the parts in each of the functions spaces in combined_space
-    #This is done using DOLFINs Function.split()
-    (TE_re,TM_re) = mode_re.split()
-    (TE_im,TM_im) = mode_im.split()
-
-    E = np.zeros([len(x),len(y),2],dtype = np.complex)
-    E_axial = np.zeros([len(x),len(y)], dtype= np.complex)
-    for i,xx in enumerate(x):
-        for j,yy in enumerate(y):
-            point = Point(xx,yy)
-            E[i,j,:]     =  TE_re(point) + 1j*TE_im(point)
-            E_axial[i,j] =  TM_re(point) + 1j*TM_im(point)
-    return E,E_axial
 
 
-
-def plot_electric_field(x,y,E,E_axial,mode,mode_idx,beta,sort_index,k0,sp=10):
-
-    mode_field1 = np.transpose((np.abs(E[:,:,0])**2 + np.abs(E[:,:,1])**2+np.abs(E_axial[:,:])**2)**0.5)
-
-    maxi = np.max(mode_field1)
-    mode_field1 /=maxi
-    fig = plt.figure(figsize=(7.0, 7.0))
-    X,Y = np.meshgrid(x,y)
-    plt.contourf(X,Y,mode_field1,90)
-    plt.quiver(X[::sp,::sp], Y[::sp,::sp], E[::sp,::sp,0], E[::sp,::sp,1],headlength=7,scale = 500000)
-    plt.xlabel(r'$x(m)$')
-    plt.ylabel(r'$y(m)$')
-    plt.title(r'mode$=$'+str(mode)+', '+'  $n_{eff}=$'+str((beta[sort_index][mode_idx]/k0).real)+str((beta[sort_index][mode_idx]/k0).imag)+'j')
-    plt.show()
-    return None
 
 
 #def electric_field_interpolation(x,y,r_core,r_clad,mode,mode_idx,k,beta,k0,A,ev,sort_index,free_dofs,combined_space,ploting = False,sp=10):
@@ -154,11 +109,7 @@ def plot_electric_field(x,y,E,E_axial,mode,mode_idx,beta,sort_index,k0,sp=10):
 #        plot_electric_field(x,y,E,E_axial,mode,mode_idx,beta,sort_index,k0,sp)
 #    return x,y,E,E_axial
 
-def electric_field_interpolation(x,y,r_core,r_clad,mode,mode_idx,k,beta,k0,A,ev,sort_index,free_dofs,combined_space,ploting = False,sp=10):
-    E,E_axial =electric_field_full(mode_idx,x,y,k,A,ev,sort_index,free_dofs,combined_space)
-    if ploting:
-        plot_electric_field(x,y,E,E_axial,mode,mode_idx,beta,sort_index,k0,sp)
-    return x,y,E,E_axial
+
 
 def conj_trans(A):
     return csr_matrix.conjugate(A).T
@@ -363,4 +314,71 @@ def Overlaps_simps(n,m,propagating_modes,x,y,r_core,r_clad,k,beta,k0,A,ev,sort_i
         #print(integrand1,integrand2,integrand3)
         #print(under1,under2)
         #return np.abs(Over)**2/(under1*under2)
-    
+
+
+class modes(object):
+    def __init__(self,mode,size1,size2,min_max,propagating_modes,beta,sort_index,k0):
+        self.mode = mode
+        self.mode_idx = propagating_modes[self.mode]
+        self.neff = beta[sort_index][self.mode_idx]/k0
+        
+        self.xmin, self.xmax,self.ymin,self.ymax = min_max
+        
+        self.x = np.linspace(self.xmin,self.ymax,size1)
+        self.y = np.linspace(self.ymin,self.ymax,size2)
+        self.E = None
+        self.E_axial = None
+
+
+        
+    def electric_field_full(self,k,A,ev,sort_index,free_dofs,combined_space):
+        """
+        Releases the electric field from the calculated eigenvalus and eigen vectors
+        
+        Returns::
+        E[size,size,2],E_axial(Ez)
+        """
+
+        #post-process the coefficients to map back to the full matrix
+        coefficiants_global = np.zeros(A.size(0),dtype=np.complex)
+        coefficiants_global[free_dofs] = ev[:,sort_index[self.mode_idx]]
+        #Create a Function on the combined space
+        mode_re = Function(combined_space)
+        mode_im = Function(combined_space)
+        #Assign the coefficients of the function to the calculated values
+        mode_re.vector().set_local(np.real(coefficiants_global))
+        mode_im.vector().set_local(np.imag(coefficiants_global))
+        #Split the function into the parts in each of the functions spaces in combined_space
+        #This is done using DOLFINs Function.split()
+        (TE_re,TM_re) = mode_re.split()
+        (TE_im,TM_im) = mode_im.split()
+
+        E = np.zeros([len(self.x),len(self.y),2],dtype = np.complex)
+        E_axial = np.zeros([len(self.x),len(self.y)], dtype= np.complex)
+        for i,xx in enumerate(self.x):
+            for j,yy in enumerate(self.y):
+                point = Point(xx,yy)
+                E[i,j,:]     =  TE_re(point) + 1j*TE_im(point)
+                E_axial[i,j] =  TM_re(point) + 1j*TM_im(point)
+        self.E = E
+        self.E_axial = E_axial
+        self.mode_field = np.transpose((np.abs(self.E[:,:,0])**2 + np.abs(self.E[:,:,1])**2+np.abs(self.E_axial[:,:])**2)**0.5)
+        maxi = np.max(self.mode_field)
+        self.mode_field /=maxi
+        return None    
+
+    def plot_electric_field(self,sp=10,scales = 500000,**kwrds):
+
+        fig = plt.figure(figsize=(7.0, 7.0))
+        X,Y = np.meshgrid(self.x,self.y)
+        try:
+            plt.contourf(X,Y,self.mode_field,90)
+        except AttributeError:
+             raise NotImplementedError("interpolate before plotting")
+
+        plt.quiver(X[::sp,::sp], Y[::sp,::sp], np.real(self.E[::sp,::sp,0]), np.real(self.E[::sp,::sp,1]),scale = scales,headlength=7)
+        plt.xlabel(r'$x(m)$')
+        plt.ylabel(r'$y(m)$')
+        plt.title(r'mode$=$'+str(self.mode)+', '+'  $n_{eff}=$'+str(self.neff.real)+str(self.neff.imag)+'j')
+        plt.show()
+        return None

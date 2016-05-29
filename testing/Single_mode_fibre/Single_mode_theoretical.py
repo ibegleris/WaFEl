@@ -18,6 +18,8 @@ from scipy.integrate import dblquad
 
 
 def system(vec,V,Delta):
+
+
     u,w = vec
     return u**2+w**2 - V**2, jv(0,u)/u/jv(1,u) - (1-Delta)*kv(0,w)/w/kv(1,w)
 
@@ -87,22 +89,22 @@ def main_test(n1,n0,lamda,a,guess = [1,1],plot = False):
 
     u,w = fsolve(system,guess,args=(V,Delta))
     neff = (((n1/u)**2 + (n0/w)**2)/((1/u)**2 + (1/w)**2))**0.5
-    beta = neff*2*pi/lamda
-    x = np.linspace(-2*a,2*a,512)
-    y = np.linspace(-2*a,2*a,512)
-    if plot ==True:
-        plot_electric(x,y,u,w,beta,a,V,Delta)
+    #beta = neff*2*pi/lamda
+    #x = np.linspace(-2*a,2*a,512)
+    #y = np.linspace(-2*a,2*a,512)
+    #if plot ==True:
+    #    plot_electric(x,y,u,w,beta,a,V,Delta)
 
-    Aeff = effective_area(a,u,w,beta,V,0,Delta)
+    Aeff = None #effective_area(a,u,w,beta,V,0,Delta)
     return neff,Aeff
 
 
 
 
 if __name__ == '__main__':
-    A = np.loadtxt('parameters.txt')
+    A = np.loadtxt('../../parameters.txt')
 
-    n1,n0,lamda,a = 1.445 - 1e-5j,1.444,1.55e-6,1e-5#A
+    n1,n0,lamda,a = 1.445-1e-4j,1.444,1.55e-6,1e-5#A
     print('core refractive index: ', n1)
     print('clading refractive index: ', n0)
     print('wavelength: ', lamda)
