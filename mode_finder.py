@@ -111,11 +111,18 @@ for mesh_refinement in range(4,5):
 
     print("The effective index of the most dominant modes are:")
     print(beta[sort_index][propagating_modes]/k0)
-
-    neff = beta[sort_index][propagating_modes]/k0
+    size1,size2 = 512,512
+    min_max = (-3*r_core,3*r_core,-3*r_core,3*r_core)
+    Aeff = []
+    for i in range(propagating_modes):
+        mode0 = modes(i,size1,size2,min_max,propagating_modes,beta,sort_index,k0)
+        mode0.electric_field_full(k,A,ev,sort_index,free_dofs,combined_space)
+        mode0.effective_area(k,A,ev,sort_index,free_dofs,combined_space,r_clad)
+        Aeff.append(mode0.Aeff)
     dicti = {}
-    dicti['neff'] = neff
+    dicti['neff'] = beta[sort_index][propagating_modes]/k0
     dicti['cells'] = num_cells
+    
     savemat('convergence'+str(mesh_refinement)+'.mat',dicti)
 """
 # ### Plot the results

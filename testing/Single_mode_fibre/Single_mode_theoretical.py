@@ -20,8 +20,12 @@ from scipy.integrate import dblquad
 def system(vec,V,Delta):
 
 
-    u,w = vec
-    return u**2+w**2 - V**2, jv(0,u)/u/jv(1,u) - (1-Delta)*kv(0,w)/w/kv(1,w)
+    ru,iu,rw,iw = vec
+    u = ru+1j*iu
+    w = rw+1j*iw
+    first = u**2+w**2 - V**2
+    second = jv(0,u)/u/jv(1,u) - (1-Delta)*kv(0,w)/w/kv(1,w)
+    return np.real(first), np.imag(first),np.real(second), np.imag(second)
 
 def sigma(u,w,V,Delta):
     return -1 - u**2 * w**2 * Delta * jv(0,u)/(V**2 * u * jv(1,u))
@@ -81,13 +85,15 @@ def effective_area(a,u,w,beta,V,n,Delta):
 
 
 
-def main_test(n1,n0,lamda,a,guess = [1,1],plot = False):
+def main_test(n1,n0,lamda,a,guess = [1,1,1,1],plot = False):
     V  = a*2*pi/lamda*(n1**2 - n0**2)**0.5
     Delta = (n1**2 - n0**2)/(2*n1**2)
     print(V)
     print('Doing calculation for: ',n1, n0,lamda,a)
 
-    u,w = fsolve(system,guess,args=(V,Delta))
+    ur,ui,wr,wi = fsolve(system,guess,args=(V,Delta))
+    u = ur+1j*ui
+    w = wr + 1j*wi
     neff = (((n1/u)**2 + (n0/w)**2)/((1/u)**2 + (1/w)**2))**0.5
     #beta = neff*2*pi/lamda
     #x = np.linspace(-2*a,2*a,512)

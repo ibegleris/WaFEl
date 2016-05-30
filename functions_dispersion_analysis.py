@@ -4,7 +4,7 @@ import numpy as np
 from scipy.constants import c,pi
 from scipy.sparse.linalg import eigs, eigsh
 from scipy.linalg import eig
-from scipy.integrate import simps
+from scipy.integrate import simps,dblquad
 from scipy.sparse import csr_matrix, lil_matrix, csc_matrix
 import matplotlib.pylab as plt
 import os
@@ -252,7 +252,7 @@ def effective_area(n,E,E_axial,x,y):
     integrand1 = np.conj(E[:,:,0])*E[:,:,0] + np.conj(E[:,:,1])*E[:,:,1] + np.conj(E_axial[:,:])*E_axial[:,:]    
     Over = integration2d_simps(x,y,integrand1)
         
-    integrand2 = np.abs(np.abs(En[:,:,0])**2 + np.abs(En[:,:,1])**2 + np.abs(E_axialn[:,:])**2)**2
+    integrand2 = np.abs(np.abs(E[:,:,0])**2 + np.abs(E[:,:,1])**2 + np.abs(E_axial[:,:])**2)**2
     under = integration2d_simps(x,y,integrand2)
         
     return np.abs(Over)**2/under
@@ -330,15 +330,7 @@ class modes(object):
         self.E_axial = None
 
 
-        
-    def electric_field_full(self,k,A,ev,sort_index,free_dofs,combined_space):
-        """
-        Releases the electric field from the calculated eigenvalus and eigen vectors
-        
-        Returns::
-        E[size,size,2],E_axial(Ez)
-        """
-
+    def dolfin_functions(self,k,A,ev,sort_index,free_dofs,combined_space):
         #post-process the coefficients to map back to the full matrix
         coefficiants_global = np.zeros(A.size(0),dtype=np.complex)
         coefficiants_global[free_dofs] = ev[:,sort_index[self.mode_idx]]
@@ -352,19 +344,55 @@ class modes(object):
         #This is done using DOLFINs Function.split()
         (TE_re,TM_re) = mode_re.split()
         (TE_im,TM_im) = mode_im.split()
+        self.TE_re = TE_re
+        self.TE_im = TE_im
+        self.TM_re = TM_re
+        self.TM_im = TM_im
+        return None#TE_re,TE_re,TM_re,TM_im
 
+    def effective_area(self,k,A,ev,sort_index,free_dofs,combined_space,lim):
+        try:
+            temp = self.TE_re
+        except AttributeError:
+            self.dolfin_functions(k,A,ev,sort_index,free_dofs,combined_space)
+            pass
+        integrand1 = dblquad(self.Eabs2, -lim, lim, lambda x: -lim,lambda x: lim)
+        integrand2 = dblquad(lambda y,x: self.Eabs2(y,x)**2, -lim, lim, lambda x: -lim,lambda x: lim)
+        
+        self.Aeff =  integrand1[0]**2/integrand2[0]
+    def Eabs2(self,y,x):
+        E_ = self.Efun(y,x)
+        return np.abs(E_[0])**2 +np.abs(E_[1])**2
+    def Efun(self,y,x):
+        point = Point(x,y)
+        E = self.TE_re(point)+1j*self.TE_im(point)
+        return E[0],E[1]
+    def electric_field_full(self,k,A,ev,sort_index,free_dofs,combined_space):
+        """
+        Releases the electric field from the calculated eigenvalus and eigen vectors
+        
+        Returns::
+        E[size,size,2],E_axial(Ez)
+        """
+        try:
+            temp = self.TE_re
+        except AttributeError:
+            self.dolfin_functions(k,A,ev,sort_index,free_dofs,combined_space)
+            pass
+        
         E = np.zeros([len(self.x),len(self.y),2],dtype = np.complex)
         E_axial = np.zeros([len(self.x),len(self.y)], dtype= np.complex)
         for i,xx in enumerate(self.x):
             for j,yy in enumerate(self.y):
                 point = Point(xx,yy)
-                E[i,j,:]     =  TE_re(point) + 1j*TE_im(point)
-                E_axial[i,j] =  TM_re(point) + 1j*TM_im(point)
+                E[i,j,:]     =  self.TE_re(point) + 1j*self.TE_im(point)
+                E_axial[i,j] =  self.TM_re(point) + 1j*self.TM_im(point)
         self.E = E
         self.E_axial = E_axial
         self.mode_field = np.transpose((np.abs(self.E[:,:,0])**2 + np.abs(self.E[:,:,1])**2+np.abs(self.E_axial[:,:])**2)**0.5)
         maxi = np.max(self.mode_field)
         self.mode_field /=maxi
+
         return None    
 
     def plot_electric_field(self,sp=10,scales = 500000,**kwrds):
