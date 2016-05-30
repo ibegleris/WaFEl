@@ -57,7 +57,7 @@ for mesh_refinement in range(4,5):
 
     x = np.linspace(-a,a,512)
     y = np.linspace(-b,b,512)
-    n_prof,k_prof = goemetry_plot(x,y,a,b,ref,extinction,nclad,ncore,r_core,r_clad)
+    #n_prof,k_prof = goemetry_plot(x,y,a,b,ref,extinction,nclad,ncore,r_core,r_clad)
 
 
     class epsilon_real(Expression):
