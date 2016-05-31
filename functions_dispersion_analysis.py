@@ -6,9 +6,9 @@ from scipy.sparse.linalg import eigs, eigsh
 from scipy.linalg import eig
 from scipy.integrate import simps,dblquad
 from scipy.sparse import csr_matrix, lil_matrix, csc_matrix
-#import matplotlib.pylab as plt
+import matplotlib.pylab as plt
 import os
-#from matplotlib.colors import from_levels_and_colors
+from matplotlib.colors import from_levels_and_colors
 from dolfin import *
 import time
 
@@ -248,14 +248,14 @@ def integration2d_simps(xx,yy,integrand):
         I[i] = simps(integrand[i,:], yy)
     return simps(I,xx)
 
-def effective_area(n,E,E_axial,x,y):
-    integrand1 = np.conj(E[:,:,0])*E[:,:,0] + np.conj(E[:,:,1])*E[:,:,1] + np.conj(E_axial[:,:])*E_axial[:,:]    
+def effective_area_simps(E,x,y):
+    integrand1 = (E[:,:,0].conjugate()*E[:,:,0] + E[:,:,1].conjugate()*E[:,:,1]).real   
     Over = integration2d_simps(x,y,integrand1)
         
-    integrand2 = np.abs(np.abs(E[:,:,0])**2 + np.abs(E[:,:,1])**2 + np.abs(E_axial[:,:])**2)**2
+    integrand2 = integrand1**2
     under = integration2d_simps(x,y,integrand2)
         
-    return np.abs(Over)**2/under
+    return Over**2/under
 
 def effective_area_simps(E,E_axial,x,y):
     integrand1 = np.conj(E[:,:,0])*E[:,:,0] + np.conj(E[:,:,1])*E[:,:,1] + np.conj(E_axial[:,:])*E_axial[:,:]    
@@ -360,13 +360,28 @@ class modes(object):
         integrand2 = dblquad(lambda y,x: self.Eabs2(y,x)**2, -lim, lim, lambda x: -lim,lambda x: lim)
         
         self.Aeff =  integrand1[0]**2/integrand2[0]
+
+
     def Eabs2(self,y,x):
         E_ = self.Efun(y,x)
-        return np.abs(E_[0])**2 +np.abs(E_[1])**2
+        return (E_[0]*E_[0].conjugate() + E_[1]*E_[1].conjugate()).real
     def Efun(self,y,x):
         point = Point(x,y)
         E = self.TE_re(point)+1j*self.TE_im(point)
         return E[0],E[1]
+
+
+    def effective_area_simps(self,k,A,ev,sort_index,free_dofs,combined_space):
+        if self.E ==None:
+            self.electric_field_full(k,A,ev,sort_index,free_dofs,combined_space)
+        
+        integrand1 = (self.E[:,:,0].conjugate()*self.E[:,:,0] + self.E[:,:,1].conjugate()*self.E[:,:,1]).real   
+        Over = integration2d_simps(self.x,self.y,integrand1)
+            
+        integrand2 = integrand1**2
+        under = integration2d_simps(self.x,self.y,integrand2)
+        self.Aeff = Over**2/under    
+        return Over**2/under
     def electric_field_full(self,k,A,ev,sort_index,free_dofs,combined_space):
         """
         Releases the electric field from the calculated eigenvalus and eigen vectors

@@ -76,39 +76,39 @@ def I(y,x,u,w,beta,a,V,psi,n,po,Delta):
     return np.abs(np.abs(ex)**2 +np.abs(ex)**2 + np.abs(ex)**2)**po
 
 
-def effective_area(a,u,w,beta,V,n,Delta):
-    top = dblquad(I,-2*a,2*a,lambda x : -2*a,lambda x: 2*a,args = (u,w,beta,a,V,0,n,1,Delta))
-    bottom = dblquad(I,-2*a,2*a,lambda x : -2*a,lambda x: 2*a,args = (u,w,beta,a,V,0,n,2,Delta))
+def effective_area(a,u,w,beta,V,n,Delta,r_clad):
+    top = dblquad(I,-r_clad,r_clad,lambda x : -r_clad,lambda x: r_clad,args = (u,w,beta,a,V,0,n,1,Delta))
+    bottom = dblquad(I,-r_clad,r_clad,lambda x : -r_clad,lambda x: r_clad,args = (u,w,beta,a,V,0,n,2,Delta))
     A_eff = top[0]**2/bottom[0]
     return A_eff    
 
 
 
 
-def main_test(n1,n0,lamda,a,guess = [1,1,1,1],plot = False):
+def main_test(n1,n0,lamda,a,r_clad,guess = [1,1,1,1],plot = False):
     V  = a*2*pi/lamda*(n1**2 - n0**2)**0.5
     Delta = (n1**2 - n0**2)/(2*n1**2)
     print(V)
     print('Doing calculation for: ',n1, n0,lamda,a)
 
     ur,ui,wr,wi = fsolve(system,guess,args=(V,Delta))
-    u = ur+1j*ui
+    u = ur + 1j*ui
     w = wr + 1j*wi
     neff = (((n1/u)**2 + (n0/w)**2)/((1/u)**2 + (1/w)**2))**0.5
-    #beta = neff*2*pi/lamda
+    beta = neff*2*pi/lamda
     #x = np.linspace(-2*a,2*a,512)
     #y = np.linspace(-2*a,2*a,512)
     #if plot ==True:
     #    plot_electric(x,y,u,w,beta,a,V,Delta)
 
-    Aeff = None #effective_area(a,u,w,beta,V,0,Delta)
+    Aeff = effective_area(a,u,w,beta,V,0,Delta,r_clad)
     return neff,Aeff
 
 
 
 
 if __name__ == '__main__':
-    A = np.loadtxt('../../parameters.txt')
+    #A = np.loadtxt('../../parameters.txt')
 
     n1,n0,lamda,a = 1.445-1e-4j,1.444,1.55e-6,1e-5#A
     print('core refractive index: ', n1)

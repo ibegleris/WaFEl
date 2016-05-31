@@ -114,13 +114,18 @@ for mesh_refinement in range(1):
     size1,size2 = 512,512
     min_max = (-3*r_core,3*r_core,-3*r_core,3*r_core)
     Aeff = []
+    Aeff_simps = []
     for i in range(len(propagating_modes)):
         mode0 = modes(i,size1,size2,min_max,propagating_modes,beta,sort_index,k0)
         #mode0.electric_field_full(k,A,ev,sort_index,free_dofs,combined_space)
-        mode0.effective_area(k,A,ev,sort_index,free_dofs,combined_space,r_clad)
-        Aeff.append(mode0.Aeff)
+       
+        temp = mode0.effective_area_simps(k,A,ev,sort_index,free_dofs,combined_space)
+        Aeff_simps.append(temp.real)
+        #mode0.effective_area(k,A,ev,sort_index,free_dofs,combined_space,r_clad)
+        #Aeff.append(mode0.Aeff)
     dicti = {}
-    dicti['Aeff'] = Aeff
+    #dicti['Aeff'] = Aeff
+    dicti['Aeff_simps'] = Aeff_simps
     dicti['neff'] = beta[sort_index][propagating_modes]/k0
     dicti['cells'] = num_cells
     
