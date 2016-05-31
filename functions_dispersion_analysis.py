@@ -6,9 +6,9 @@ from scipy.sparse.linalg import eigs, eigsh
 from scipy.linalg import eig
 from scipy.integrate import simps,dblquad
 from scipy.sparse import csr_matrix, lil_matrix, csc_matrix
-import matplotlib.pylab as plt
+#import matplotlib.pylab as plt
 import os
-from matplotlib.colors import from_levels_and_colors
+#from matplotlib.colors import from_levels_and_colors
 from dolfin import *
 import time
 

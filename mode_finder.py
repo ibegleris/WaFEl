@@ -5,7 +5,7 @@ from scipy.constants import c,pi
 from scipy.sparse.linalg import eigs, eigsh
 from scipy.linalg import eig
 from scipy.sparse import csr_matrix, lil_matrix, csc_matrix
-import matplotlib.pylab as plt
+#import matplotlib.pylab as plt
 from scipy.integrate import simps
 import os
 from matplotlib.colors import from_levels_and_colors
@@ -29,7 +29,7 @@ num= 10   #The number of modes guess
 neff_g= ncore
 mesh_refinement = 0 # number of times to uniformly refine the mesh (used for convergence plots and better results)
 
-for mesh_refinement in range(4,5):
+for mesh_refinement in range(1):
     k = is_loss(ncore,nclad)
     #if k ==0:
     V = 2*pi/lamda*r_core*(ncore.real**2 - nclad.real**2)**0.5
@@ -114,12 +114,13 @@ for mesh_refinement in range(4,5):
     size1,size2 = 512,512
     min_max = (-3*r_core,3*r_core,-3*r_core,3*r_core)
     Aeff = []
-    for i in range(propagating_modes):
+    for i in range(len(propagating_modes)):
         mode0 = modes(i,size1,size2,min_max,propagating_modes,beta,sort_index,k0)
-        mode0.electric_field_full(k,A,ev,sort_index,free_dofs,combined_space)
+        #mode0.electric_field_full(k,A,ev,sort_index,free_dofs,combined_space)
         mode0.effective_area(k,A,ev,sort_index,free_dofs,combined_space,r_clad)
         Aeff.append(mode0.Aeff)
     dicti = {}
+    dicti['Aeff'] = Aeff
     dicti['neff'] = beta[sort_index][propagating_modes]/k0
     dicti['cells'] = num_cells
     
