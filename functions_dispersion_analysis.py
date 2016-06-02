@@ -43,7 +43,7 @@ def gmesh_mesh(filename,a,b,r_core,r_clad,mesh_refinement):
     return mesh
 
 
-def goemetry_plot(x,y,a,b,ref,extinction,nclad,ncore,r_core,r_clad):
+def geometry_plot(x,y,a,b,ref,extinction,nclad,ncore,r_core,r_clad):
 
     X,Y = np.meshgrid(x,y)
     n_plot = np.zeros(np.shape(X))
@@ -410,18 +410,32 @@ class modes(object):
 
         return None    
 
-    def plot_electric_field(self,sp=10,scales = 500000,**kwrds):
+    def plot_electric_field(self,sp=10,scales = 500000,cont_scale=90,**kwrds):
 
         fig = plt.figure(figsize=(7.0, 7.0))
-        X,Y = np.meshgrid(self.x,self.y)
+        xplot = self.x*1e6
+        yplot = self.y*1e6
+        X,Y = np.meshgrid(xplot,yplot)
         try:
-            plt.contourf(X,Y,self.mode_field,90)
+            plt.contourf(X,Y,self.mode_field,cont_scale)
         except AttributeError:
              raise NotImplementedError("interpolate before plotting")
 
         plt.quiver(X[::sp,::sp], Y[::sp,::sp], np.real(self.E[::sp,::sp,0]), np.real(self.E[::sp,::sp,1]),scale = scales,headlength=7)
-        plt.xlabel(r'$x(m)$')
-        plt.ylabel(r'$y(m)$')
-        plt.title(r'mode$=$'+str(self.mode)+', '+'  $n_{eff}=$'+str(self.neff.real)+str(self.neff.imag)+'j')
-        plt.show()
+        plt.xlabel(r'$x(\mu m)$')
+        plt.ylabel(r'$y(\mu m)$')
+        #plt.title(r'mode$=$'+str(self.mode)+', '+'  $n_{eff}=$'+str(self.neff.real)+str(self.neff.imag)+'j')
+        if savefigs ==True:    
+            plt.savefig('mode'+str(self.mode)+'.eps',bbox_inches ='tight')
+        
+            D = {}
+            D['X'] = X
+            D['Y'] = Y
+            D['Z'] = self.mode_field
+            D['u'] = np.real(self.E[::sp,::sp,0])
+            D['v'] = np.real(self.E[::sp,::sp,1])
+            D['scale'] = scales
+            D['cont_scale'] = 90
+            D['sp'] = sp
+            savemat('mode'+str(self.mode)+'.mat',D)
         return None
