@@ -29,7 +29,7 @@ num= 10   #The number of modes guess
 neff_g= ncore
 mesh_refinement = 0 # number of times to uniformly refine the mesh (used for convergence plots and better results)
 
-for mesh_refinement in range(1):
+for mesh_refinement in range(5):
     k = is_loss(ncore,nclad)
     #if k ==0:
     V = 2*pi/lamda*r_core*(ncore.real**2 - nclad.real**2)**0.5
@@ -130,34 +130,34 @@ for mesh_refinement in range(1):
     dicti['cells'] = num_cells
     
     savemat('convergence'+str(mesh_refinement)+'.mat',dicti)
-"""
+#"""
 # ### Plot the results
 
 # In[75]:
 
-size1,size2 = 512,512
-min_max = (-3*r_core,3*r_core,-3*r_core,3*r_core)
+#size1,size2 = 512,512
+#min_max = (-3*r_core,3*r_core,-3*r_core,3*r_core)
 
 
 # In[76]:
 
-mode0 = modes(0,size1,size2,min_max,propagating_modes,beta,sort_index,k0)
-mode0.electric_field_full(k,A,ev,sort_index,free_dofs,combined_space)
+#mode0 = modes(0,size1,size2,min_max,propagating_modes,beta,sort_index,k0)
+#mode0.electric_field_full(k,A,ev,sort_index,free_dofs,combined_space)
 
 
 # In[77]:
 
-mode0.plot_electric_field(scales = 100000,sp=40)
+#mode0.plot_electric_field(scales = 100000,sp=40)
 
 
 # In[78]:
 
-mode1 = modes(1,size1,size2,min_max,propagating_modes,beta,sort_index,k0)
-mode1.electric_field_full(k,A,ev,sort_index,free_dofs,combined_space)
+#mode1 = modes(1,size1,size2,min_max,propagating_modes,beta,sort_index,k0)
+#mode1.electric_field_full(k,A,ev,sort_index,free_dofs,combined_space)
 
 
 # In[79]:
 
-mode1.plot_electric_field(scales = 900000,sp=40)
+#mode1.plot_electric_field(scales = 900000,sp=40)
 
-"""
+#"""
