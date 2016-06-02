@@ -1,0 +1,17 @@
+figures/
+figures/*
+*.pvd
+#*.ipynb
+*.pyc
+*.pdf
+*.eps
+*.png
+*.txt
+papers/*
+papers/
+*.mph
+*.csv
+*.log
+misc/
+*~
+*_checkpoints
