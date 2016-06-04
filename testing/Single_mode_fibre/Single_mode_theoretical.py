@@ -115,7 +115,7 @@ if __name__ == '__main__':
     print('clading refractive index: ', n0)
     print('wavelength: ', lamda)
     print('core radius: ', a)
-    neff,Aeff = main_test(n1,n0,lamda,a)
+    neff,Aeff = main_test(n1,n0,lamda,a,10e-5)
     print('resulting in:')
     print('effective index: ', neff)
 
