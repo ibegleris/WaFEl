@@ -1,7 +1,7 @@
 a = DefineNumber[ 0.0002, Name "Parameters/a" ];
 b = DefineNumber[ 0.0002, Name "Parameters/b" ];
-rcore = DefineNumber[ 1e-05, Name "Parameters/rcore" ];
-rclad = DefineNumber[ 0.0001, Name "Parameters/rclad" ];
+rcore = DefineNumber[ 1e-5, Name "Parameters/rcore" ];
+rclad = DefineNumber[ 0.00003, Name "Parameters/rclad" ];
 Point(1) = {0, 0, 0, rcore};
 Point(2) = {rcore, 0, 0, rcore};
 Point(3) = {0, rcore, 0, rcore};

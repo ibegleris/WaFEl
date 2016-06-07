@@ -6,17 +6,17 @@ from scipy.sparse.linalg import eigs, eigsh
 from scipy.linalg import eig
 from scipy.integrate import simps,dblquad
 from scipy.sparse import csr_matrix, lil_matrix, csc_matrix
-import matplotlib.pylab as plt
+#import matplotlib.pylab as plt
 import os
-from matplotlib.colors import from_levels_and_colors
+#from matplotlib.colors import from_levels_and_colors
 from dolfin import *
 import time
 
-def gmesh_mesh(filename,a,b,r_core,r_clad,mesh_refinement):
+def gmesh_mesh(filename,a,b,r_core,r_clad,mesh_refinement,gmsh_ver = 'gmsh'):
     filename = os.path.join('fenics_mesh',filename) 
     with open(filename, 'r') as content_file:
         content = content_file.readlines()
-    mesh_geom=os.popen("gmsh fenics_mesh/Output.geo -2 -o fenics_mesh/output_small.msh")
+    mesh_geom=os.popen(gmsh_ver + " fenics_mesh/Output.geo -2 -o fenics_mesh/output_small.msh")
     print mesh_geom.read()
     new_content = []
     new_content.append('DefineConstant[ a = { '+str(a)+', Path "Gmsh/Parameters"}];\n')
@@ -34,13 +34,51 @@ def gmesh_mesh(filename,a,b,r_core,r_clad,mesh_refinement):
             refine_list.append("refine"+str(i+1))
         os.popen("rm fenics_mesh/refine*")
         for i in range(mesh_refinement):
-            mesh_dolf = os.popen("gmsh -refine fenics_mesh/"+str(refine_list[i])+".msh -o fenics_mesh/"+str(refine_list[i+1])+'.msh')
+            mesh_dolf = os.popen(gmsh_ver + " -refine fenics_mesh/"+str(refine_list[i])+".msh -o fenics_mesh/"+str(refine_list[i+1])+'.msh')
             print mesh_dolf.read()
             time.sleep(4)
     mesh_dolf = os.popen("dolfin-convert fenics_mesh/"+refine_list[-1]+".msh fenics_mesh/fibre_small.xml")
     print mesh_dolf.read()
     mesh = Mesh("fenics_mesh/fibre_small.xml")
     return mesh
+
+
+def gmesh_mesh_new(filename,a,b,r_core,r_clad,mesh_refinement,gmsh_ver = 'gmsh'):
+    filename = os.path.join('fenics_mesh',filename) 
+    with open(filename, 'r') as content_file:
+        content = content_file.readlines()
+    mesh_geom=os.popen(gmsh_ver + " fenics_mesh/Output.geo -2 -o fenics_mesh/output_small.msh")
+    print mesh_geom.read()
+    new_content = []
+    #new_content.append('DefineConstant[ a = { '+str(a)+', Path "Gmsh/Parameters"}];\n')
+    #new_content.append('DefineConstant[ b = { '+str(b)+', Path "Gmsh/Parameters"}];\n')
+    #new_content.append('DefineConstant[ r_core = { '+str(r_core)+', Path "Gmsh/Parameters"}];\n')
+    #new_content.append('DefineConstant[ r_clad = { '+str(r_clad)+', Path "Gmsh/Parameters"}];\n')
+    new_content.append('a = DefineNumber[ '+str(a)+', Name "Parameters/a" ];\n')
+    new_content.append('b = DefineNumber[ '+str(b)+', Name "Parameters/b" ];\n')
+    new_content.append('rcore = DefineNumber[ '+str(r_core)+', Name "Parameters/rcore" ];\n')
+    new_content.append('rclad = DefineNumber[ '+str(r_clad)+', Name "Parameters/rclad" ];\n')
+
+    for i in range(4,len(content)):
+        new_content.append(content[i])
+    with open("fenics_mesh/Output.geo", "w") as text_file:
+        for i in new_content:
+            text_file.write(i)
+    refine_list = ["output_small"]
+    if mesh_refinement !=0:
+        for i in range(mesh_refinement):
+            refine_list.append("refine"+str(i+1))
+        os.popen("rm fenics_mesh/refine*")
+        for i in range(mesh_refinement):
+            mesh_dolf = os.popen(gmsh_ver + " -refine fenics_mesh/"+str(refine_list[i])+".msh -o fenics_mesh/"+str(refine_list[i+1])+'.msh')
+            print mesh_dolf.read()
+            time.sleep(4)
+    mesh_dolf = os.popen("dolfin-convert fenics_mesh/"+refine_list[-1]+".msh fenics_mesh/fibre_small.xml")
+    print mesh_dolf.read()
+    mesh = Mesh("fenics_mesh/fibre_small.xml")
+    return mesh
+
+
 
 
 def geometry_plot(x,y,a,b,ref,extinction,nclad,ncore,r_core,r_clad):
@@ -95,8 +133,12 @@ def csr_creation(A,B,free_dofs):
         B_lil[B_indices, i] =  B_values[:, np.newaxis]
     return A_lil.tocsr(), B_lil.tocsr()
 
-
-
+#def get_rows(i,):
+#    A_indices, A_values = A.getrow(i)
+#    B_indices, B_values = B.getrow(i)
+#    A_lil[A_indices, i] =  A_values[:, np.newaxis]
+#    B_lil[B_indices, i] =  B_values[:, np.newaxis]
+#    re
 
 
 
@@ -237,7 +279,7 @@ def find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_=1
         print("normal eigenvalue solver ")
         #eigen, ev = scipy_eigensolver(A_np,B_np)
         eigen, ev = scipy_eigensolver(np.dot(np.conjugate(B_np).T,A_np),np.dot(np.conjugate(B_np).T,B_np))
-    return eigen,ev
+    return eigen,ev,A_np,B_np
 
 
 def integration2d_simps(xx,yy,integrand):

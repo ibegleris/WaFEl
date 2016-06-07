@@ -8,7 +8,7 @@ from scipy.sparse import csr_matrix, lil_matrix, csc_matrix
 #import matplotlib.pylab as plt
 from scipy.integrate import simps
 import os
-from matplotlib.colors import from_levels_and_colors
+#from matplotlib.colors import from_levels_and_colors
 from dolfin import *
 import time
 from functions_dispersion_analysis import *
@@ -73,9 +73,9 @@ for mesh_refinement in range(5):
 
     # Load the gmsh file and if asked for refine the mesh.
 
-    mesh = gmesh_mesh("original_geometry.geo",a,b,r_core,r_clad,mesh_refinement)
+    #mesh = gmesh_mesh("original_geometry.geo",a,b,r_core,r_clad,mesh_refinement)
     #plot(mesh,interactive=True)
-
+    mesh = gmesh_mesh_new("geometry_new.geo",a,b,r_core,r_clad,mesh_refinement)
 
 
 
@@ -98,7 +98,7 @@ for mesh_refinement in range(5):
 
 
 
-    eigen,ev = find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_=True)
+    eigen,ev,A_np,B_np = find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_=True)
 
 
     beta =1j*(eigen)**0.5 
