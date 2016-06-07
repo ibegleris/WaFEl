@@ -29,7 +29,7 @@ num= 10   #The number of modes guess
 neff_g= ncore
 mesh_refinement = 0 # number of times to uniformly refine the mesh (used for convergence plots and better results)
 
-for mesh_refinement in range(5):
+for mesh_refinement in range(4,6):
     k = is_loss(ncore,nclad)
     #if k ==0:
     V = 2*pi/lamda*r_core*(ncore.real**2 - nclad.real**2)**0.5
