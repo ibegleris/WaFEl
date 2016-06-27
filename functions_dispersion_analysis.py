@@ -281,7 +281,6 @@ def find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_,A
         dot_sparse = csc_matrix.dot
         if A_np == None:       
             A_np, B_np = csr_creation(A,B,free_dofs)
-        
             if k != 0:
                 A_np_complex, B_np_complex = csr_creation(A_complex,B_complex,free_dofs)
                 A_np += 1j*A_np_complex

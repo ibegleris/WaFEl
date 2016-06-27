@@ -97,7 +97,7 @@ for num in range(5):
 
 
 
-    eigen,ev,A_np,B_np = find_eigenvalues(A,B,A_complex,B_complex,neff_g,1000,k0,free_dofs,k,sparse_,None,None))
+    eigen,ev,A_np,B_np = find_eigenvalues(A,B,A_complex,B_complex,neff_g,1000,k0,free_dofs,k,sparse_,None,None)
 
 
     beta =1j*(eigen)**0.5 
@@ -128,7 +128,7 @@ for num in range(5):
     dicti['neff'] = beta[sort_index][propagating_modes]/k0
     dicti['cells'] = num_cells
     
-    savemat('convergence'+str(mesh_refinement )+'.mat',dicti)
+    savemat('convergence'+str(num)+'.mat',dicti)
 #"""
 # ### Plot the results
 

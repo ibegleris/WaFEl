@@ -21,10 +21,10 @@ Point(9) = {-sqrt22*rcore, -sqrt22*rcore, 0, lam/num};
 Point(10) ={sqrt22*rcore, -sqrt22*rcore, 0, lam/num};
 
 
-Point(11) = {sqrt22*rclad, sqrt22*rclad, 0,50*lam/num};
-Point(12) = {-sqrt22*rclad, sqrt22*rclad, 0, 50*lam/num};
-Point(13) = {-sqrt22*rclad, -sqrt22*rclad, 0, 50*lam/num};
-Point(14) = {sqrt22*rclad, -sqrt22*rclad, 0, 50*lam/num};
+Point(11) = {sqrt22*rclad, sqrt22*rclad, 0,50*lam};
+Point(12) = {-sqrt22*rclad, sqrt22*rclad, 0, 50*lam};
+Point(13) = {-sqrt22*rclad, -sqrt22*rclad, 0, 50*lam};
+Point(14) = {sqrt22*rclad, -sqrt22*rclad, 0, 50*lam};
 
 
 Circle(1) = {7, 1, 8};
@@ -71,4 +71,3 @@ Plane Surface(36) = {35};
 Line Loop(37) = {2, 3, 4, 1};
 Plane Surface(38) = {37};
 
-Coherence;
