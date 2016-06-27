@@ -2,72 +2,81 @@ a = DefineNumber[ 0.0002, Name "Parameters/a" ];
 b = DefineNumber[ 0.0002, Name "Parameters/b" ];
 rcore = DefineNumber[ 1e-05, Name "Parameters/rcore" ];
 rclad = DefineNumber[ 0.0001, Name "Parameters/rclad" ];
+numlim = DefineNumber[ 0.333333333333, Name "Parameters/numlim" ];
 lam = DefineNumber[ 1.55e-06, Name "Parameters/lam" ];
-num = DefineNumber[ 2, Name "Parameters/num" ];
-sqrt22 = DefineNumber[  0.7071067811865476, Name "Parameters/sqrt22" ];
-
-Point(1) = {0, 0, 0, lam/num};
-
-Point(2) = {-a, -b, 0, 100*lam};
-Point(3) = {-a, b, 0, 100*lam};
-Point(4) = {a, b, 0, 100*lam};
-Point(5) = {a, -b, 0, 100*lam};
+elmin = DefineNumber[ numlim*lam, Name "Parameters/elmin" ];
+sqrt2 = DefineNumber[ 0.7071067811865476, Name "Parameters/sqrt2" ];
+elminclad = DefineNumber[ 50*numlim*lam, Name "Parameters/elminclad" ];
+elminboundary = DefineNumber[ 70*numlim*lam, Name "Parameters/elminboundary" ];
 
 
 
-Point(7) = {sqrt22*rcore, sqrt22*rcore, 0, lam/num};
-Point(8) = {-sqrt22*rcore, sqrt22*rcore, 0,lam/num};
-Point(9) = {-sqrt22*rcore, -sqrt22*rcore, 0, lam/num};
-Point(10) ={sqrt22*rcore, -sqrt22*rcore, 0, lam/num};
+Point(1) = {0, 0, 0, elmin};
+Point(2) = {rcore, 0, 0,elmin};
+Point(3) = {sqrt2*rcore, sqrt2*rcore, 0,elmin};
+Point(4) = {0, rcore, 0,elmin};
+Point(5) = {-sqrt2*rcore, sqrt2*rcore, 0,elmin};
+Point(6) = {-rcore, 0, 0,elmin};
+Point(7) = {-sqrt2*rcore, -sqrt2*rcore, 0,elmin};
+Point(8) = {0, -rcore, 0,elmin};
+Point(9) = {sqrt2*rcore, -sqrt2*rcore, 0,elmin};
 
 
-Point(11) = {sqrt22*rclad, sqrt22*rclad, 0,50*lam};
-Point(12) = {-sqrt22*rclad, sqrt22*rclad, 0, 50*lam};
-Point(13) = {-sqrt22*rclad, -sqrt22*rclad, 0, 50*lam};
-Point(14) = {sqrt22*rclad, -sqrt22*rclad, 0, 50*lam};
+Point(10) = {rclad, 0, 0,elminclad};
+Point(11) = {sqrt2*rclad, sqrt2*rclad, 0,elminclad};
+Point(12) = {0, rclad, 0,elminclad};
+Point(13) = {-sqrt2*rclad, sqrt2*rclad, 0,elminclad};
+Point(14) = {-rclad, 0, 0,elminclad};
+Point(15) = {-sqrt2*rclad, -sqrt2*rclad, 0,elminclad};
+Point(16) = {0, -rclad, 0,elminclad};
+Point(17) = {sqrt2*rclad, -sqrt2*rclad, 0,elminclad};
 
 
-Circle(1) = {7, 1, 8};
-Circle(2) = {8, 1, 9};
-Circle(3) = {9, 1, 10};
-Circle(4) = {10, 1, 7};
+
+Point(18) = {-a, -b, 0,elminboundary};
+Point(19) = {a, -b, 0,elminboundary};
+Point(20) = {a, b, 0,elminboundary};
+Point(21) = {-a, b, 0,elminboundary};
 
 
-Circle(5) = {11, 1, 12};
-Circle(6) = {12, 1, 13};
-Circle(7) = {13, 1, 14};
-Circle(8) = {14, 1, 11};
+Circle(1) = {2, 1, 3};
+Circle(2) = {3, 1, 4};
+Circle(3) = {4, 1, 5};
+Circle(4) = {5, 1, 6};
+Circle(5) = {6, 1, 7};
+Circle(6) = {7, 1, 8};
+Circle(7) = {8, 1, 9};
+Circle(8) = {9, 1, 2};
 
-Line(9) = {2, 5};
-Line(10) = {5, 4};
-Line(11) = {4, 3};
-Line(12) = {3, 2};
 
 
-Line(13) = {2, 13};
-Line(14) = {3, 12};
-Line(15) = {4, 11};
-Line(16) = {5, 14};
-Line(17) = {13, 9};
-Line(18) = {12, 8};
-Line(19) = {11, 7};
-Line(20) = {14, 10};
-Line Loop(21) = {12, 13, -6, -14};
-Plane Surface(22) = {21};
-Line Loop(23) = {11, 14, -5, -15};
-Plane Surface(24) = {23};
-Line Loop(25) = {15, -8, -16, 10};
-Plane Surface(26) = {25};
-Line Loop(27) = {16, -7, -13, 9};
-Plane Surface(28) = {27};
-Line Loop(29) = {6, 17, -2, -18};
-Plane Surface(30) = {29};
-Line Loop(31) = {5, 18, -1, -19};
-Plane Surface(32) = {31};
-Line Loop(33) = {8, 19, -4, -20};
-Plane Surface(34) = {33};
-Line Loop(35) = {20, -3, -17, 7};
-Plane Surface(36) = {35};
-Line Loop(37) = {2, 3, 4, 1};
-Plane Surface(38) = {37};
+Circle(9) = {10, 1, 11};
+Circle(10) = {11, 1, 12};
+Circle(11) = {12, 1, 13};
+Circle(12) = {13, 1, 14};
+Circle(13) = {14, 1, 15};
+Circle(14) = {15, 1, 16};
+Circle(15) = {16, 1, 17};
+Circle(16) = {17, 1, 10};
+
+
+
+Line(17) = {18, 19};
+Line(18) = {19, 20};
+Line(19) = {20, 21};
+Line(20) = {21, 18};
+
+
+Line Loop(21) = {20, 17, 18, 19};
+Line Loop(22) = {12, 13, 14, 15, 16, 9, 10, 11};
+Plane Surface(23) = {21, 22};
+Line Loop(24) = {3, 4, 5, 6, 7, 8, 1, 2};
+Plane Surface(25) = {22, 24};
+Plane Surface(26) = {24};
+Transfinite Surface {23};
+Transfinite	Surface {25};
+Trnasfinite Surface {26};
+//Recombine Surface {23};
+//Recombine Surface {25};
+//Recombine Surface {26};
 

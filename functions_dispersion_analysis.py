@@ -43,7 +43,7 @@ def gmesh_mesh(filename,a,b,r_core,r_clad,mesh_refinement,gmsh_ver = 'gmsh'):
     return mesh
 
 
-def gmesh_mesh_new(filename,a,b,r_core,r_clad,mesh_refinement,lamda,num,gmsh_ver = 'gmsh'):
+def gmesh_mesh_new(filename,a,b,r_core,r_clad,mesh_refinement,lamda,numlim,gmsh_ver = 'gmsh'):
     filename = os.path.join('fenics_mesh',filename) 
     with open(filename, 'r') as content_file:
         content = content_file.readlines()
@@ -58,9 +58,8 @@ def gmesh_mesh_new(filename,a,b,r_core,r_clad,mesh_refinement,lamda,num,gmsh_ver
     new_content.append('b = DefineNumber[ '+str(b)+', Name "Parameters/b" ];\n')
     new_content.append('rcore = DefineNumber[ '+str(r_core)+', Name "Parameters/rcore" ];\n')
     new_content.append('rclad = DefineNumber[ '+str(r_clad)+', Name "Parameters/rclad" ];\n')
+    new_content.append('numlim = DefineNumber[ '+str(numlim)+', Name "Parameters/numlim" ];\n')
     new_content.append('lam = DefineNumber[ '+str(lamda)+', Name "Parameters/lam" ];\n')
-    new_content.append('num = DefineNumber[ '+str(num)+', Name "Parameters/num" ];\n')
-    
     for i in range(6,len(content)):
         new_content.append(content[i])
     with open("fenics_mesh/Output.geo", "w") as text_file:
@@ -256,7 +255,7 @@ def boundary_marker_locator(A,electric_wall):
     free_dofs = np.where(indicators == 0)[0]
     return free_dofs
 
-def find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_,A_np=None,B_np=None):
+def find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_=1):
     if not(sparse_):
         print('trying non sparse matrix')
         try:
@@ -279,15 +278,14 @@ def find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_,A
 
     if sparse_:
         dot_sparse = csc_matrix.dot
-        if A_np == None:       
-            A_np, B_np = csr_creation(A,B,free_dofs)
-            if k != 0:
-                A_np_complex, B_np_complex = csr_creation(A_complex,B_complex,free_dofs)
-                A_np += 1j*A_np_complex
-                B_np += 1j*B_np_complex
-                del A_np_complex,B_np_complex
-            A_np = A_np[free_dofs,:][:,free_dofs]
-            B_np = B_np[free_dofs,:][:,free_dofs]
+        A_np, B_np = csr_creation(A,B,free_dofs)
+        if k != 0:
+            A_np_complex, B_np_complex = csr_creation(A_complex,B_complex,free_dofs)
+            A_np += 1j*A_np_complex
+            B_np += 1j*B_np_complex
+            del A_np_complex,B_np_complex
+        A_np = A_np[free_dofs,:][:,free_dofs]
+        B_np = B_np[free_dofs,:][:,free_dofs]
         print "sparse eigenvalue time"
         eigen, ev = scipy_sparse_eigensolver(dot_sparse(conj_trans(B_np),A_np),dot_sparse(conj_trans(B_np),B_np),neff_g,num,k0)
     else:

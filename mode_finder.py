@@ -26,10 +26,10 @@ nclad = 1.444#- 0.1e-4j# ref index of cladding
 ncore = 1.445 - 1e-4j # ref index of core
 #neff_g = 1.4445 # Guess of the modes
 num= 10   #The number of modes guess 
-neff_g= ncore
+neff_g= 1.4444696341894405-7.8562093865609619e-05
 mesh_refinement = 0 # number of times to uniformly refine the mesh (used for convergence plots and better results)
-sparse_ =True
-for num in range(5):
+
+for num in range(1,1/2.,1/3,1/4.,1/5.):
     k = is_loss(ncore,nclad)
     #if k ==0:
     V = 2*pi/lamda*r_core*(ncore.real**2 - nclad.real**2)**0.5
@@ -75,7 +75,7 @@ for num in range(5):
 
     #mesh = gmesh_mesh("original_geometry.geo",a,b,r_core,r_clad,mesh_refinement)
     #plot(mesh,interactive=True)
-    mesh = gmesh_mesh_new("step_index_fibre.geo",a,b,r_core,r_clad,mesh_refinement,lamda,num)
+    mesh = gmesh_mesh_new("geometry_new.geo",a,b,r_core,r_clad,mesh_refinement,lamda,num)
 
 
 
@@ -91,19 +91,20 @@ for num in range(5):
 
     combined_space, A,B, A_complex,B_complex = Matrix_creation(mesh,epsilon_real,epsilon_imag,mu_r,k,k0,vector_order,nodal_order)
 
+
     A,B,A_complex,B_complex,electric_wall = Mirror_boundary(mesh,combined_space,A,B,A_complex,B_complex,k)
     #free_dofs = boundary_marker_locator(A,electric_wall)
     free_dofs = boundary_marker_locator(A,electric_wall)
 
 
 
-    eigen,ev,A_np,B_np = find_eigenvalues(A,B,A_complex,B_complex,neff_g,1000,k0,free_dofs,k,sparse_,None,None)
+    eigen,ev,A_np,B_np = find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_=True)
 
 
     beta =1j*(eigen)**0.5 
     beta = np.abs(np.real(beta)) -1j*np.imag(beta)
 
-    sort_index = np.argsort(beta.imag)[::-1]
+    sort_index = np.argsort(beta.real)[::-1]
 
     propagating_modes = np.where(((beta[sort_index]/k0).real>nclad.real) & ((beta[sort_index]/k0).real<ncore))
     propagating_modes = propagating_modes[0][:]
