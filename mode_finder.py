@@ -28,8 +28,8 @@ ncore = 1.445 - 1e-4j # ref index of core
 num= 10   #The number of modes guess 
 neff_g= ncore
 mesh_refinement = 0 # number of times to uniformly refine the mesh (used for convergence plots and better results)
-
-for mesh_refinement in range(4,6):
+sparse_ =True
+for num in range(5):
     k = is_loss(ncore,nclad)
     #if k ==0:
     V = 2*pi/lamda*r_core*(ncore.real**2 - nclad.real**2)**0.5
@@ -75,7 +75,7 @@ for mesh_refinement in range(4,6):
 
     #mesh = gmesh_mesh("original_geometry.geo",a,b,r_core,r_clad,mesh_refinement)
     #plot(mesh,interactive=True)
-    mesh = gmesh_mesh_new("geometry_new.geo",a,b,r_core,r_clad,mesh_refinement)
+    mesh = gmesh_mesh_new("step_index_fibre.geo",a,b,r_core,r_clad,mesh_refinement,lamda,num)
 
 
 
@@ -84,13 +84,12 @@ for mesh_refinement in range(4,6):
 
 
 
-    vector_order = 2
+    vector_order = 3
     nodal_order = 3
 
     # Define the forms (matrix elements) for dispersion analysis into the basis functions
 
     combined_space, A,B, A_complex,B_complex = Matrix_creation(mesh,epsilon_real,epsilon_imag,mu_r,k,k0,vector_order,nodal_order)
-
 
     A,B,A_complex,B_complex,electric_wall = Mirror_boundary(mesh,combined_space,A,B,A_complex,B_complex,k)
     #free_dofs = boundary_marker_locator(A,electric_wall)
@@ -98,13 +97,13 @@ for mesh_refinement in range(4,6):
 
 
 
-    eigen,ev,A_np,B_np = find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_=True)
+    eigen,ev,A_np,B_np = find_eigenvalues(A,B,A_complex,B_complex,neff_g,1000,k0,free_dofs,k,sparse_,None,None))
 
 
     beta =1j*(eigen)**0.5 
     beta = np.abs(np.real(beta)) -1j*np.imag(beta)
 
-    sort_index = np.argsort(beta.real)[::-1]
+    sort_index = np.argsort(beta.imag)[::-1]
 
     propagating_modes = np.where(((beta[sort_index]/k0).real>nclad.real) & ((beta[sort_index]/k0).real<ncore))
     propagating_modes = propagating_modes[0][:]
@@ -129,7 +128,7 @@ for mesh_refinement in range(4,6):
     dicti['neff'] = beta[sort_index][propagating_modes]/k0
     dicti['cells'] = num_cells
     
-    savemat('convergence'+str(mesh_refinement)+'.mat',dicti)
+    savemat('convergence'+str(mesh_refinement )+'.mat',dicti)
 #"""
 # ### Plot the results
 

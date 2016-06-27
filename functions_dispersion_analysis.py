@@ -1,14 +1,14 @@
 from __future__ import division#, print_function
-#from dolfin import *
+from dolfin import *
 import numpy as np
 from scipy.constants import c,pi
 from scipy.sparse.linalg import eigs, eigsh
 from scipy.linalg import eig
 from scipy.integrate import simps,dblquad
 from scipy.sparse import csr_matrix, lil_matrix, csc_matrix
-#import matplotlib.pylab as plt
+import matplotlib.pyplot as plt
 import os
-#from matplotlib.colors import from_levels_and_colors
+from matplotlib.colors import from_levels_and_colors
 from dolfin import *
 import time
 
@@ -16,7 +16,7 @@ def gmesh_mesh(filename,a,b,r_core,r_clad,mesh_refinement,gmsh_ver = 'gmsh'):
     filename = os.path.join('fenics_mesh',filename) 
     with open(filename, 'r') as content_file:
         content = content_file.readlines()
-    mesh_geom=os.popen(gmsh_ver + " fenics_mesh/Output.geo -2 -o fenics_mesh/output_small.msh")
+    mesh_geom=os.popen(gmsh_ver + "-optimize_lloyd fenics_mesh/Output.geo -2 -o fenics_mesh/output_small.msh")
     print mesh_geom.read()
     new_content = []
     new_content.append('DefineConstant[ a = { '+str(a)+', Path "Gmsh/Parameters"}];\n')
@@ -43,12 +43,12 @@ def gmesh_mesh(filename,a,b,r_core,r_clad,mesh_refinement,gmsh_ver = 'gmsh'):
     return mesh
 
 
-def gmesh_mesh_new(filename,a,b,r_core,r_clad,mesh_refinement,gmsh_ver = 'gmsh'):
+def gmesh_mesh_new(filename,a,b,r_core,r_clad,mesh_refinement,lamda,num,gmsh_ver = 'gmsh'):
     filename = os.path.join('fenics_mesh',filename) 
     with open(filename, 'r') as content_file:
         content = content_file.readlines()
-    mesh_geom=os.popen(gmsh_ver + " fenics_mesh/Output.geo -2 -o fenics_mesh/output_small.msh")
-    print mesh_geom.read()
+    
+    
     new_content = []
     #new_content.append('DefineConstant[ a = { '+str(a)+', Path "Gmsh/Parameters"}];\n')
     #new_content.append('DefineConstant[ b = { '+str(b)+', Path "Gmsh/Parameters"}];\n')
@@ -58,13 +58,17 @@ def gmesh_mesh_new(filename,a,b,r_core,r_clad,mesh_refinement,gmsh_ver = 'gmsh')
     new_content.append('b = DefineNumber[ '+str(b)+', Name "Parameters/b" ];\n')
     new_content.append('rcore = DefineNumber[ '+str(r_core)+', Name "Parameters/rcore" ];\n')
     new_content.append('rclad = DefineNumber[ '+str(r_clad)+', Name "Parameters/rclad" ];\n')
-
-    for i in range(4,len(content)):
+    new_content.append('lam = DefineNumber[ '+str(lamda)+', Name "Parameters/lam" ];\n')
+    new_content.append('num = DefineNumber[ '+str(num)+', Name "Parameters/num" ];\n')
+    
+    for i in range(6,len(content)):
         new_content.append(content[i])
     with open("fenics_mesh/Output.geo", "w") as text_file:
         for i in new_content:
             text_file.write(i)
     refine_list = ["output_small"]
+    mesh_geom = os.popen(gmsh_ver + " fenics_mesh/Output.geo -2 -o fenics_mesh/output_small.msh")
+    print mesh_geom.read()
     if mesh_refinement !=0:
         for i in range(mesh_refinement):
             refine_list.append("refine"+str(i+1))
@@ -73,7 +77,11 @@ def gmesh_mesh_new(filename,a,b,r_core,r_clad,mesh_refinement,gmsh_ver = 'gmsh')
             mesh_dolf = os.popen(gmsh_ver + " -refine fenics_mesh/"+str(refine_list[i])+".msh -o fenics_mesh/"+str(refine_list[i+1])+'.msh')
             print mesh_dolf.read()
             time.sleep(4)
+        
+
+
     mesh_dolf = os.popen("dolfin-convert fenics_mesh/"+refine_list[-1]+".msh fenics_mesh/fibre_small.xml")
+    time.sleep(4)
     print mesh_dolf.read()
     mesh = Mesh("fenics_mesh/fibre_small.xml")
     return mesh
@@ -125,7 +133,6 @@ def scipy_eigensolver(A_np,B_np):
 def csr_creation(A,B,free_dofs):
     A_lil = lil_matrix((A.size(0), A.size(1)))
     B_lil = lil_matrix((B.size(0), B.size(1)))
-        
     for i in range(A.size(1)):
         A_indices, A_values = A.getrow(i)
         B_indices, B_values = B.getrow(i)
@@ -133,6 +140,13 @@ def csr_creation(A,B,free_dofs):
         B_lil[B_indices, i] =  B_values[:, np.newaxis]
     return A_lil.tocsr(), B_lil.tocsr()
 
+from joblib import Parallel, delayed
+def loop_hard(i,A,B,A_lil,B_lil):
+    A_indices, A_values = A.getrow(i)
+    B_indices, B_values = B.getrow(i)
+    A_lil[A_indices, i] =  A_values[:, np.newaxis]
+    B_lil[B_indices, i] =  B_values[:, np.newaxis]
+    return 
 #def get_rows(i,):
 #    A_indices, A_values = A.getrow(i)
 #    B_indices, B_values = B.getrow(i)
@@ -242,7 +256,7 @@ def boundary_marker_locator(A,electric_wall):
     free_dofs = np.where(indicators == 0)[0]
     return free_dofs
 
-def find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_=1):
+def find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_,A_np=None,B_np=None):
     if not(sparse_):
         print('trying non sparse matrix')
         try:
@@ -265,14 +279,16 @@ def find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_=1
 
     if sparse_:
         dot_sparse = csc_matrix.dot
-        A_np, B_np = csr_creation(A,B,free_dofs)
-        if k != 0:
-            A_np_complex, B_np_complex = csr_creation(A_complex,B_complex,free_dofs)
-            A_np += 1j*A_np_complex
-            B_np += 1j*B_np_complex
-            del A_np_complex,B_np_complex
-        A_np = A_np[free_dofs,:][:,free_dofs]
-        B_np = B_np[free_dofs,:][:,free_dofs]
+        if A_np == None:       
+            A_np, B_np = csr_creation(A,B,free_dofs)
+        
+            if k != 0:
+                A_np_complex, B_np_complex = csr_creation(A_complex,B_complex,free_dofs)
+                A_np += 1j*A_np_complex
+                B_np += 1j*B_np_complex
+                del A_np_complex,B_np_complex
+            A_np = A_np[free_dofs,:][:,free_dofs]
+            B_np = B_np[free_dofs,:][:,free_dofs]
         print "sparse eigenvalue time"
         eigen, ev = scipy_sparse_eigensolver(dot_sparse(conj_trans(B_np),A_np),dot_sparse(conj_trans(B_np),B_np),neff_g,num,k0)
     else:
@@ -452,7 +468,7 @@ class modes(object):
 
         return None    
 
-    def plot_electric_field(self,sp=10,scales = 500000,cont_scale=90,**kwrds):
+    def plot_electric_field(self,sp=10,scales = 500000,cont_scale=90,savefigs=False):
 
         fig = plt.figure(figsize=(7.0, 7.0))
         xplot = self.x*1e6

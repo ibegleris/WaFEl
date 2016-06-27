@@ -1,9 +1,9 @@
 a = DefineNumber[ 0.0002, Name "Parameters/a" ];
 b = DefineNumber[ 0.0002, Name "Parameters/b" ];
-rcore = DefineNumber[ 1e-05, Name "Parameters/rcore" ];
-rclad = DefineNumber[ 0.0001, Name "Parameters/rclad" ];
-lam = DefineNumber[ 1.55e-06, Name "Parameters/lam" ];
-num = DefineNumber[ 5, Name "Parameters/num" ];
+rcore = DefineNumber[ 1e-5, Name "Parameters/rcore" ];
+rclad = DefineNumber[ 10e-5, Name "Parameters/rclad" ];
+lam = DefineNumber[ 1.55e-6, Name "Parameters/lam" ];
+num = DefineNumber[  5, Name "Parameters/num" ];
 sqrt22 = DefineNumber[  0.7071067811865476, Name "Parameters/sqrt22" ];
 
 Point(1) = {0, 0, 0, lam/num};
