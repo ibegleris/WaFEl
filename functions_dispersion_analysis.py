@@ -7,6 +7,8 @@ from scipy.linalg import eig
 from scipy.integrate import simps,dblquad
 from scipy.sparse import csr_matrix, lil_matrix, csc_matrix
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 import os
 from matplotlib.colors import from_levels_and_colors
 from dolfin import *

@@ -2,12 +2,12 @@ a = DefineNumber[ 0.0002, Name "Parameters/a" ];
 b = DefineNumber[ 0.0002, Name "Parameters/b" ];
 rcore = DefineNumber[ 1e-05, Name "Parameters/rcore" ];
 rclad = DefineNumber[ 0.0001, Name "Parameters/rclad" ];
-numlim = DefineNumber[ 0.333333333333, Name "Parameters/numlim" ];
+numlim = DefineNumber[ 1, Name "Parameters/numlim" ];
 lam = DefineNumber[ 1.55e-06, Name "Parameters/lam" ];
 elmin = DefineNumber[ numlim*lam, Name "Parameters/elmin" ];
 sqrt2 = DefineNumber[ 0.7071067811865476, Name "Parameters/sqrt2" ];
-elminclad = DefineNumber[ 50*numlim*lam, Name "Parameters/elminclad" ];
-elminboundary = DefineNumber[ 70*numlim*lam, Name "Parameters/elminboundary" ];
+elminclad = DefineNumber[ 70*numlim*lam, Name "Parameters/elminclad" ];
+elminboundary = DefineNumber[ 100*numlim*lam, Name "Parameters/elminboundary" ];
 
 
 
@@ -73,9 +73,9 @@ Plane Surface(23) = {21, 22};
 Line Loop(24) = {3, 4, 5, 6, 7, 8, 1, 2};
 Plane Surface(25) = {22, 24};
 Plane Surface(26) = {24};
-Transfinite Surface {23};
-Transfinite	Surface {25};
-Trnasfinite Surface {26};
+//Transfinite Surface {23};
+//Transfinite	Surface {25};
+//Trnasfinite Surface {26};
 //Recombine Surface {23};
 //Recombine Surface {25};
 //Recombine Surface {26};

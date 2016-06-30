@@ -8,6 +8,8 @@ from scipy.sparse import csr_matrix, lil_matrix, csc_matrix
 #import matplotlib.pylab as plt
 from scipy.integrate import simps
 import os
+import matplotlib
+matplotlib.use('Agg')
 #from matplotlib.colors import from_levels_and_colors
 from dolfin import *
 import time
@@ -29,7 +31,7 @@ num= 10   #The number of modes guess
 neff_g= 1.4444696341894405-7.8562093865609619e-05
 mesh_refinement = 0 # number of times to uniformly refine the mesh (used for convergence plots and better results)
 
-for num in range(1,1/2.,1/3,1/4.,1/5.):
+for nil,num in enumerate((1/4.,1/5.)):
     k = is_loss(ncore,nclad)
     #if k ==0:
     V = 2*pi/lamda*r_core*(ncore.real**2 - nclad.real**2)**0.5
@@ -75,8 +77,8 @@ for num in range(1,1/2.,1/3,1/4.,1/5.):
 
     #mesh = gmesh_mesh("original_geometry.geo",a,b,r_core,r_clad,mesh_refinement)
     #plot(mesh,interactive=True)
+    #mesh = gmesh_mesh_new("geometry_new.geo",a,b,r_core,r_clad,mesh_refinement,lamda,num)
     mesh = gmesh_mesh_new("geometry_new.geo",a,b,r_core,r_clad,mesh_refinement,lamda,num)
-
 
 
 
@@ -97,8 +99,8 @@ for num in range(1,1/2.,1/3,1/4.,1/5.):
     free_dofs = boundary_marker_locator(A,electric_wall)
 
 
-
-    eigen,ev,A_np,B_np = find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_=True)
+    print(A.size(0))
+    eigen,ev,A_np,B_np = find_eigenvalues(A,B,A_complex,B_complex,neff_g,20,k0,free_dofs,k,sparse_=True)
 
 
     beta =1j*(eigen)**0.5 
@@ -129,7 +131,7 @@ for num in range(1,1/2.,1/3,1/4.,1/5.):
     dicti['neff'] = beta[sort_index][propagating_modes]/k0
     dicti['cells'] = num_cells
     
-    savemat('convergence'+str(num)+'.mat',dicti)
+    savemat('convergence'+str(nil+3)+'.mat',dicti)
 #"""
 # ### Plot the results
 
