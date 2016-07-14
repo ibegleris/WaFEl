@@ -1,5 +1,4 @@
 from __future__ import division#, print_function
-from dolfin import *
 import numpy as np
 from scipy.constants import c,pi
 from scipy.sparse.linalg import eigs, eigsh
@@ -11,7 +10,7 @@ import matplotlib
 matplotlib.use('Agg')
 import os
 from matplotlib.colors import from_levels_and_colors
-from dolfin import *
+import dolfin as dol
 import time
 
 def gmesh_mesh(filename,a,b,r_core,r_clad,mesh_refinement,gmsh_ver = 'gmsh'):
@@ -41,7 +40,7 @@ def gmesh_mesh(filename,a,b,r_core,r_clad,mesh_refinement,gmsh_ver = 'gmsh'):
             time.sleep(4)
     mesh_dolf = os.popen("dolfin-convert fenics_mesh/"+refine_list[-1]+".msh fenics_mesh/fibre_small.xml")
     print mesh_dolf.read()
-    mesh = Mesh("fenics_mesh/fibre_small.xml")
+    mesh = dol.Mesh("fenics_mesh/fibre_small.xml")
     return mesh
 
 
@@ -84,7 +83,7 @@ def gmesh_mesh_new(filename,a,b,r_core,r_clad,mesh_refinement,lamda,numlim,gmsh_
     mesh_dolf = os.popen("dolfin-convert fenics_mesh/"+refine_list[-1]+".msh fenics_mesh/fibre_small.xml")
     time.sleep(4)
     print mesh_dolf.read()
-    mesh = Mesh("fenics_mesh/fibre_small.xml")
+    mesh = dol.Mesh("fenics_mesh/fibre_small.xml")
     return mesh
 
 
@@ -188,8 +187,8 @@ def strip_boundary(free_dofs,A):
 def function_space(vector_order,nodal_order,mesh):
     "Define the function spaces"
     
-    vector_space = FunctionSpace(mesh,"Nedelec 1st kind H(curl)",vector_order)
-    nodal_space = FunctionSpace(mesh,"Lagrange",nodal_order)
+    vector_space = dol.FunctionSpace(mesh,"Nedelec 1st kind H(curl)",vector_order)
+    nodal_space = dol.FunctionSpace(mesh,"Lagrange",nodal_order)
     combined_space = vector_space*nodal_space
     return combined_space
 
@@ -198,49 +197,52 @@ def Matrix_creation(mesh,epsilon_real,epsilon_imag,mu_r,k,k0,vector_order = 2,no
     combined_space = function_space(vector_order,nodal_order,mesh)
     # Define the test and trial functions from the combined space here N_i and N_j are Nedelec 
     # basis functions and L_i and L_j are Lagrange basis functions
-    (N_i,L_i) = TestFunctions(combined_space)
-    (N_j,L_j) = TrialFunctions(combined_space)
+    (N_i,L_i) = dol.TestFunctions(combined_space)
+    (N_j,L_j) = dol.TrialFunctions(combined_space)
     e_r_real = epsilon_real()
     
-    s_tt_ij = 1.0/mu_r*inner(curl(N_i),curl(N_j))
-    t_tt_ij = e_r_real*inner(N_i,N_j)
-    s_zz_ij = (1.0/mu_r) * inner(grad(L_i),grad(L_j))
-    t_zz_ij = e_r_real*inner(L_i,L_j)
+    s_tt_ij = 1.0/mu_r*dol.inner(dol.curl(N_i),dol.curl(N_j))
+    t_tt_ij = e_r_real*dol.inner(N_i,N_j)
+    s_zz_ij = (1.0/mu_r) * dol.inner(dol.grad(L_i),dol.grad(L_j))
+    t_zz_ij = e_r_real*dol.inner(L_i,L_j)
 
 
     A_tt_ij = s_tt_ij - k0**2*t_tt_ij
     B_zz_ij = s_zz_ij - k0**2*t_zz_ij
 
-    B_tt_ij = 1/mu_r*inner(N_i, N_j)
-    B_tz_ij = 1/mu_r*inner(N_i, grad(L_j))
+    B_tt_ij = 1/mu_r*dol.inner(N_i, N_j)
+    B_tz_ij = 1/mu_r*dol.inner(N_i, dol.grad(L_j))
 
-    B_zt_ij = 1/mu_r*inner(grad(L_i),N_j)
+    B_zt_ij = 1/mu_r*dol.inner(dol.grad(L_i),N_j)
     #post-multiplication by dx will result in integration over the domain of the mesh at assembly time
-    A_ij = A_tt_ij*dx
-    B_ij = (B_tt_ij+B_tz_ij+B_zt_ij+B_zz_ij)*dx
+    A_ij = A_tt_ij*dol.dx
+    B_ij = (B_tt_ij+B_tz_ij+B_zt_ij+B_zz_ij)*dol.dx
     #assemble the system Matrices. If there is loss in the system then
     #we create a new set of matrixes and assemble them
-
-    A = assemble(A_ij)
-    B = assemble(B_ij)
+    A = dol.PETScMatrix()
+    B = dol.PETScMatrix()
+    dol.assemble(A_ij,tensor = A)
+    dol.assemble(B_ij,tensor = B)
     ####This is to try and introduce the complex part
     if k !=0:
         e_r_imag = epsilon_imag()
-        A_ii_complex = e_r_imag*k0**2*inner(N_i,N_j)*dx
-        B_ii_complex = e_r_imag*k0**2*inner(L_i,L_j)*dx
-        A_complex = assemble(A_ii_complex)
-        B_complex = assemble(B_ii_complex)
+        A_ii_complex = e_r_imag*k0**2*dol.inner(N_i,N_j)*dol.dx
+        B_ii_complex = e_r_imag*k0**2*dol.inner(L_i,L_j)*dol.dx
+        A_complex = dol.PETScMatrix()
+        B_complex = dol.PETScMatrix()
+        dol.assemble(A_ii_complex,tensor = A_complex)
+        dol.assemble(B_ii_complex,tensor = B_complex)
     else:
         A_complex, B_complex = None, None
     return combined_space, A,B, A_complex,B_complex
 
 
 def Mirror_boundary(mesh,combined_space,A,B,A_complex,B_complex,k):
-    boundary_markers = MeshFunction('size_t',mesh,1)
+    boundary_markers = dol.MeshFunction('size_t',mesh,1)
     boundary_markers.set_all(0)
-    DomainBoundary().mark(boundary_markers,1)
+    dol.DomainBoundary().mark(boundary_markers,1)
     # Set zero electric field on the edges (electric wall) and mark the boundaries as 1
-    electric_wall = DirichletBC(combined_space,Expression(("0.0","0.0","0.0"))
+    electric_wall = dol.DirichletBC(combined_space,dol.Expression(("0.0","0.0","0.0"))
                             ,boundary_markers,1)
     # apply the boundary condition to the assembled matrices
     electric_wall.apply(A)

@@ -1,5 +1,6 @@
 figures/
 figures/*
+*.h
 *.pvd
 #*.ipynb
 *.pyc
@@ -13,6 +14,7 @@ papers/
 *.csv
 *.log
 misc/
+misc/*
 *~
 *_checkpoints
 convergence*
