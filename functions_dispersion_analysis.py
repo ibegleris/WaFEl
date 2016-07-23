@@ -5,56 +5,25 @@ from scipy.sparse.linalg import eigs, eigsh
 from scipy.linalg import eig
 from scipy.integrate import simps,dblquad
 from scipy.sparse import csr_matrix, lil_matrix, csc_matrix
-import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use('Agg')
+import matplotlib.pylab as plt
 import os
 from matplotlib.colors import from_levels_and_colors
-import dolfin as dol
+import dolfin as df
 import time
+import matplotlib.tri as tri
 
-def gmesh_mesh(filename,a,b,r_core,r_clad,mesh_refinement,gmsh_ver = 'gmsh'):
-    filename = os.path.join('fenics_mesh',filename) 
+def gmesh_mesh_new(filename, a, b, r_core, r_clad,mesh_refinement, lamda, numlim, gmsh_ver='gmsh'):
+    """
+    A function built to reconfigure the geometry file for gmsh.
+    Given the filename in the fenics_mesh folder it appends the
+    input parameters of the file, calls gmsh to create the mesh
+    and uses dolfin-convert to convert it to an xml file.
+    The previous file is then loaded in to python as a FEniCS mesh.
+    """
+    filename = os.path.join('fenics_mesh', filename)
     with open(filename, 'r') as content_file:
         content = content_file.readlines()
-    mesh_geom=os.popen(gmsh_ver + "-optimize_lloyd fenics_mesh/Output.geo -2 -o fenics_mesh/output_small.msh")
-    print mesh_geom.read()
     new_content = []
-    new_content.append('DefineConstant[ a = { '+str(a)+', Path "Gmsh/Parameters"}];\n')
-    new_content.append('DefineConstant[ b = { '+str(b)+', Path "Gmsh/Parameters"}];\n')
-    new_content.append('DefineConstant[ r_core = { '+str(r_core)+', Path "Gmsh/Parameters"}];\n')
-    new_content.append('DefineConstant[ r_clad = { '+str(r_clad)+', Path "Gmsh/Parameters"}];\n')
-    for i in range(4,len(content)):
-        new_content.append(content[i])
-    with open("fenics_mesh/Output.geo", "w") as text_file:
-        for i in new_content:
-            text_file.write(i)
-    refine_list = ["output_small"]
-    if mesh_refinement !=0:
-        for i in range(mesh_refinement):
-            refine_list.append("refine"+str(i+1))
-        os.popen("rm fenics_mesh/refine*")
-        for i in range(mesh_refinement):
-            mesh_dolf = os.popen(gmsh_ver + " -refine fenics_mesh/"+str(refine_list[i])+".msh -o fenics_mesh/"+str(refine_list[i+1])+'.msh')
-            print mesh_dolf.read()
-            time.sleep(4)
-    mesh_dolf = os.popen("dolfin-convert fenics_mesh/"+refine_list[-1]+".msh fenics_mesh/fibre_small.xml")
-    print mesh_dolf.read()
-    mesh = dol.Mesh("fenics_mesh/fibre_small.xml")
-    return mesh
-
-
-def gmesh_mesh_new(filename,a,b,r_core,r_clad,mesh_refinement,lamda,numlim,gmsh_ver = 'gmsh'):
-    filename = os.path.join('fenics_mesh',filename) 
-    with open(filename, 'r') as content_file:
-        content = content_file.readlines()
-    
-    
-    new_content = []
-    #new_content.append('DefineConstant[ a = { '+str(a)+', Path "Gmsh/Parameters"}];\n')
-    #new_content.append('DefineConstant[ b = { '+str(b)+', Path "Gmsh/Parameters"}];\n')
-    #new_content.append('DefineConstant[ r_core = { '+str(r_core)+', Path "Gmsh/Parameters"}];\n')
-    #new_content.append('DefineConstant[ r_clad = { '+str(r_clad)+', Path "Gmsh/Parameters"}];\n')
     new_content.append('a = DefineNumber[ '+str(a)+', Name "Parameters/a" ];\n')
     new_content.append('b = DefineNumber[ '+str(b)+', Name "Parameters/b" ];\n')
     new_content.append('rcore = DefineNumber[ '+str(r_core)+', Name "Parameters/rcore" ];\n')
@@ -68,51 +37,92 @@ def gmesh_mesh_new(filename,a,b,r_core,r_clad,mesh_refinement,lamda,numlim,gmsh_
             text_file.write(i)
     refine_list = ["output_small"]
     mesh_geom = os.popen(gmsh_ver + " fenics_mesh/Output.geo -2 -o fenics_mesh/output_small.msh")
-    print mesh_geom.read()
+    print(mesh_geom.read())
     if mesh_refinement !=0:
         for i in range(mesh_refinement):
             refine_list.append("refine"+str(i+1))
         os.popen("rm fenics_mesh/refine*")
         for i in range(mesh_refinement):
             mesh_dolf = os.popen(gmsh_ver + " -refine fenics_mesh/"+str(refine_list[i])+".msh -o fenics_mesh/"+str(refine_list[i+1])+'.msh')
-            print mesh_dolf.read()
+            print(mesh_dolf.read())
             time.sleep(4)
-        
-
-
+       
     mesh_dolf = os.popen("dolfin-convert fenics_mesh/"+refine_list[-1]+".msh fenics_mesh/fibre_small.xml")
     time.sleep(4)
-    print mesh_dolf.read()
-    mesh = dol.Mesh("fenics_mesh/fibre_small.xml")
+    print(mesh_dolf.read())
+    mesh = df.Mesh("fenics_mesh/fibre_small.xml")
     return mesh
 
 
+def plot_mesh(mesh,savefig = False,show = False):
+    n = mesh.num_vertices()
+    d = mesh.geometry().dim()
+
+    # Create the triangulation
+    mesh_coordinates = mesh.coordinates().reshape((n, d))
+    triangles = np.asarray([cell.entities(0) for cell in df.cells(mesh)])
+    triangulation = tri.Triangulation(mesh_coordinates[:, 0],
+                                      mesh_coordinates[:, 1],
+                                      triangles)
+
+    triangulation.x *=1e6 
+    triangulation.y *=1e6 
+    # Plot the mesh
+    fig = plt.figure(figsize=(7.0, 7.0))
+    plt.triplot(triangulation)
+    plt.xlabel(r'$x(\mu m)$')
+    plt.ylabel(r'$y(\mu m)$')
+
+    if savefig != False:
+        plt.savefig(savefig)
+    if show != False:
+        plt.show()
+    return None
+
+class box_domain(object):
+    def __init__(self,a,b):
+        self.a = a
+        self.b = b
+
+class waveguide_inputs(box_domain):
+    def __init__(self,lam,refr,exti):
+        self.lamda = lam
+        self.ref = refr
+        self.extinction = exti
+        self.k0 = 2*pi /self.lamda
+    def geometry_plot(self,Npoints = 256):
+        x = np.linspace(-self.a, self.a)
+        y = np.linspace(-self.b, self.b)
+        X,Y = np.meshgrid(x,y)
+        n_plot = np.zeros(np.shape(X))
+        k_plot = np.zeros(np.shape(X))
+        for i,xx in enumerate(x):
+            for j,yy in enumerate(y):
+                n_plot[i,j] = ref([xx,yy])*10000000
+                k_plot[i,j] = extinction([xx,yy])*10000000
+
+                cmap1, norm1 = from_levels_and_colors([1,ref([r_core,0])*10000000,ref([r_clad,0])*10000000], ['blue', 'green','red'],extend='max')
+                cmap2, norm2 = from_levels_and_colors([0,extinction([r_core,0])*10000000,extinction([r_clad,0])*10000000],  ['blue', 'green','red'],extend='max')
+
+                fig = plt.figure(figsize=(20.0, 20.0))
+                ax1 = fig.add_subplot(221)
+                ax1.pcolormesh(X,Y,n_plot, cmap=cmap1, norm=norm1)
+                ax1.set_title('real part profile')
+                ax1.axis('equal')
+                
+                ax2 = fig.add_subplot(222)
+                ax2.pcolormesh(X,Y,k_plot, cmap=cmap2, norm=norm2)
+                ax2.set_title('Imaginary part  profile')
+                ax2.axis('equal')
+                return n_plot,k_plot
 
 
-def geometry_plot(x,y,a,b,ref,extinction,nclad,ncore,r_core,r_clad):
 
-    X,Y = np.meshgrid(x,y)
-    n_plot = np.zeros(np.shape(X))
-    k_plot = np.zeros(np.shape(X))
-    for i,xx in enumerate(x):
-        for j,yy in enumerate(y):
-            n_plot[i,j] = ref([xx,yy])*10000000
-            k_plot[i,j] = extinction([xx,yy])*10000000
+class eigen_parameters(object):
+    def __init__(self,num, neff_g):
+        self.num = num 
+        self.neff_g = neff_g
 
-    cmap1, norm1 = from_levels_and_colors([1,ref([r_core,0])*10000000,ref([r_clad,0])*10000000], ['blue', 'green','red'],extend='max')
-    cmap2, norm2 = from_levels_and_colors([0,extinction([r_core,0])*10000000,extinction([r_clad,0])*10000000],  ['blue', 'green','red'],extend='max')
-
-    fig = plt.figure(figsize=(20.0, 20.0))
-    ax1 = fig.add_subplot(221)
-    ax1.pcolormesh(X,Y,n_plot, cmap=cmap1, norm=norm1)
-    ax1.set_title('real part profile')
-    ax1.axis('equal')
-    
-    ax2 = fig.add_subplot(222)
-    ax2.pcolormesh(X,Y,k_plot, cmap=cmap2, norm=norm2)
-    ax2.set_title('Imaginary part  profile')
-    ax2.axis('equal')
-    return n_plot,k_plot
 
 
 def scipy_sparse_eigensolver(A_np_sp,B_np_sp,neff_g,num,k0):
@@ -130,41 +140,46 @@ def scipy_eigensolver(A_np,B_np):
     return eigen, ev
 
 
-def csr_creation(A,B,free_dofs):
-    A_lil = lil_matrix((A.size(0), A.size(1)))
-    B_lil = lil_matrix((B.size(0), B.size(1)))
-    for i in range(A.size(1)):
-        A_indices, A_values = A.getrow(i)
-        B_indices, B_values = B.getrow(i)
-        A_lil[A_indices, i] =  A_values[:, np.newaxis]
-        B_lil[B_indices, i] =  B_values[:, np.newaxis]
-    return A_lil.tocsr(), B_lil.tocsr()
+def mat_to_csr(dffin_matrix):
+    """
+    Convert any PETScMatrix to scipy csr matrix.
+    The code is based on code by Miroslav Kuchta.
+    """
+    rows = [0]
+    cols = []
+    values = []
+    for irow in range(dffin_matrix.size(0)):
+        indices, values_ = dffin_matrix.getrow(irow)
+        rows.append(len(indices)+rows[-1])
+        cols.extend(indices)
+        values.extend(values_)
 
-from joblib import Parallel, delayed
-def loop_hard(i,A,B,A_lil,B_lil):
-    A_indices, A_values = A.getrow(i)
-    B_indices, B_values = B.getrow(i)
-    A_lil[A_indices, i] =  A_values[:, np.newaxis]
-    B_lil[B_indices, i] =  B_values[:, np.newaxis]
-    return 
-#def get_rows(i,):
-#    A_indices, A_values = A.getrow(i)
-#    B_indices, B_values = B.getrow(i)
-#    A_lil[A_indices, i] =  A_values[:, np.newaxis]
-#    B_lil[B_indices, i] =  B_values[:, np.newaxis]
-#    re
+    shape = dffin_matrix.size(0), dffin_matrix.size(1)
+
+    return csr_matrix((np.array(values, dtype='float64'), np.array(cols, dtype='int'), np.array(rows, dtype='int')), shape)
 
 
-
-
-
-
-#def electric_field_interpolation(x,y,r_core,r_clad,mode,mode_idx,k,beta,k0,A,ev,sort_index,free_dofs,combined_space,ploting = False,sp=10):
-#    E,E_axial =electric_field_full(mode_idx,x,y,k,A,ev,sort_index,free_dofs,combined_space)
-#    if ploting:
-#        plot_electric_field(x,y,E,E_axial,mode,mode_idx,beta,sort_index,k0,sp)
-#    return x,y,E,E_axial
-
+def dolfin_to_eigs(A,B,A_complex,B_complex,k,free_dofs):
+    """
+    Has the dolfin objects A,B,A_complex,B_complex inputted  and returns the matrices in the 
+    form that should be inputted in to the eigenvalue solver.
+    """
+    A = mat_to_csr(A)
+    B = mat_to_csr(B)
+    dot_sparse = csc_matrix.dot
+    if k != 0:
+        A_complex = mat_to_csr(A_complex)
+        B_complex = mat_to_csr(B_complex)
+        A_full = A + 1j*A_complex
+        B_full = B + 1j*B_complex
+    else:
+        A_full = A
+        B_full = B
+    A_full = A_full[free_dofs,:][:,free_dofs]
+    B_full = B_full[free_dofs,:][:,free_dofs]
+    A_eigs = dot_sparse(conj_trans(B_full),A_full)
+    B_eigs = dot_sparse(conj_trans(B_full),B_full)
+    return A_eigs,B_eigs
 
 
 def conj_trans(A):
@@ -187,62 +202,72 @@ def strip_boundary(free_dofs,A):
 def function_space(vector_order,nodal_order,mesh):
     "Define the function spaces"
     
-    vector_space = dol.FunctionSpace(mesh,"Nedelec 1st kind H(curl)",vector_order)
-    nodal_space = dol.FunctionSpace(mesh,"Lagrange",nodal_order)
+    vector_space = df.FunctionSpace(mesh,"Nedelec 1st kind H(curl)",vector_order)
+    nodal_space = df.FunctionSpace(mesh,"Lagrange",nodal_order)
     combined_space = vector_space*nodal_space
     return combined_space
 
 
-def Matrix_creation(mesh,epsilon_real,epsilon_imag,mu_r,k,k0,vector_order = 2,nodal_order = 3):
+class epsilon_real(df.Expression):
+    def __init__(self,function):
+        self.fun = function
+    def eval(self, values, x):
+       values = self.fun(x,values)
+
+class epsilon_imag(df.Expression):
+    def __init__(self,function):
+        self.fun = function
+    def eval(self, values, x):
+       values = self.fun(x,values)
+
+
+def Matrix_creation(mesh,mu_r,k,k0,ref,extinction = None,vector_order = 3,nodal_order = 3):
     combined_space = function_space(vector_order,nodal_order,mesh)
     # Define the test and trial functions from the combined space here N_i and N_j are Nedelec 
     # basis functions and L_i and L_j are Lagrange basis functions
-    (N_i,L_i) = dol.TestFunctions(combined_space)
-    (N_j,L_j) = dol.TrialFunctions(combined_space)
-    e_r_real = epsilon_real()
+    (N_i,L_i) = df.TestFunctions(combined_space)
+    (N_j,L_j) = df.TrialFunctions(combined_space)
+    e_r_real = epsilon_real(ref)
     
-    s_tt_ij = 1.0/mu_r*dol.inner(dol.curl(N_i),dol.curl(N_j))
-    t_tt_ij = e_r_real*dol.inner(N_i,N_j)
-    s_zz_ij = (1.0/mu_r) * dol.inner(dol.grad(L_i),dol.grad(L_j))
-    t_zz_ij = e_r_real*dol.inner(L_i,L_j)
+    s_tt_ij = 1.0/mu_r*df.inner(df.curl(N_i),df.curl(N_j))
+    t_tt_ij = e_r_real*df.inner(N_i,N_j)
+    s_zz_ij = (1.0/mu_r) * df.inner(df.grad(L_i),df.grad(L_j))
+    t_zz_ij = e_r_real*df.inner(L_i,L_j)
 
 
     A_tt_ij = s_tt_ij - k0**2*t_tt_ij
     B_zz_ij = s_zz_ij - k0**2*t_zz_ij
 
-    B_tt_ij = 1/mu_r*dol.inner(N_i, N_j)
-    B_tz_ij = 1/mu_r*dol.inner(N_i, dol.grad(L_j))
+    B_tt_ij = 1/mu_r*df.inner(N_i, N_j)
+    B_tz_ij = 1/mu_r*df.inner(N_i, df.grad(L_j))
 
-    B_zt_ij = 1/mu_r*dol.inner(dol.grad(L_i),N_j)
+    B_zt_ij = 1/mu_r*df.inner(df.grad(L_i),N_j)
     #post-multiplication by dx will result in integration over the domain of the mesh at assembly time
-    A_ij = A_tt_ij*dol.dx
-    B_ij = (B_tt_ij+B_tz_ij+B_zt_ij+B_zz_ij)*dol.dx
+    A_ij = A_tt_ij*df.dx
+    B_ij = (B_tt_ij+B_tz_ij+B_zt_ij+B_zz_ij)*df.dx
     #assemble the system Matrices. If there is loss in the system then
     #we create a new set of matrixes and assemble them
-    A = dol.PETScMatrix()
-    B = dol.PETScMatrix()
-    dol.assemble(A_ij,tensor = A)
-    dol.assemble(B_ij,tensor = B)
+
+    A = df.assemble(A_ij)
+    B = df.assemble(B_ij)
     ####This is to try and introduce the complex part
     if k !=0:
-        e_r_imag = epsilon_imag()
-        A_ii_complex = e_r_imag*k0**2*dol.inner(N_i,N_j)*dol.dx
-        B_ii_complex = e_r_imag*k0**2*dol.inner(L_i,L_j)*dol.dx
-        A_complex = dol.PETScMatrix()
-        B_complex = dol.PETScMatrix()
-        dol.assemble(A_ii_complex,tensor = A_complex)
-        dol.assemble(B_ii_complex,tensor = B_complex)
+        e_r_imag = epsilon_imag(extinction)
+        A_ii_complex = e_r_imag*k0**2*df.inner(N_i,N_j)*df.dx
+        B_ii_complex = e_r_imag*k0**2*df.inner(L_i,L_j)*df.dx
+        A_complex = df.assemble(A_ii_complex)
+        B_complex = df.assemble(B_ii_complex)
     else:
         A_complex, B_complex = None, None
     return combined_space, A,B, A_complex,B_complex
 
 
 def Mirror_boundary(mesh,combined_space,A,B,A_complex,B_complex,k):
-    boundary_markers = dol.MeshFunction('size_t',mesh,1)
+    boundary_markers = df.MeshFunction('size_t',mesh,1)
     boundary_markers.set_all(0)
-    dol.DomainBoundary().mark(boundary_markers,1)
+    df.DomainBoundary().mark(boundary_markers,1)
     # Set zero electric field on the edges (electric wall) and mark the boundaries as 1
-    electric_wall = dol.DirichletBC(combined_space,dol.Expression(("0.0","0.0","0.0"))
+    electric_wall = df.DirichletBC(combined_space,df.Expression(("0.0","0.0","0.0"))
                             ,boundary_markers,1)
     # apply the boundary condition to the assembled matrices
     electric_wall.apply(A)
@@ -375,6 +400,7 @@ def Overlaps_simps(n,m,propagating_modes,x,y,r_core,r_clad,k,beta,k0,A,ev,sort_i
         #return np.abs(Over)**2/(under1*under2)
 
 
+
 class modes(object):
     def __init__(self,mode,size1,size2,min_max,propagating_modes,beta,sort_index,k0):
         self.mode = mode
@@ -387,15 +413,15 @@ class modes(object):
         self.y = np.linspace(self.ymin,self.ymax,size2)
         self.E = None
         self.E_axial = None
-
+        self.E_vec = None
 
     def dolfin_functions(self,k,A,ev,sort_index,free_dofs,combined_space):
         #post-process the coefficients to map back to the full matrix
         coefficiants_global = np.zeros(A.size(0),dtype=np.complex)
         coefficiants_global[free_dofs] = ev[:,sort_index[self.mode_idx]]
         #Create a Function on the combined space
-        mode_re = Function(combined_space)
-        mode_im = Function(combined_space)
+        mode_re = df.Function(combined_space)
+        mode_im = df.Function(combined_space)
         #Assign the coefficients of the function to the calculated values
         mode_re.vector().set_local(np.real(coefficiants_global))
         mode_im.vector().set_local(np.imag(coefficiants_global))
@@ -425,7 +451,7 @@ class modes(object):
         E_ = self.Efun(y,x)
         return (E_[0]*E_[0].conjugate() + E_[1]*E_[1].conjugate()).real
     def Efun(self,y,x):
-        point = Point(x,y)
+        point = df.Point(x,y)
         E = self.TE_re(point)+1j*self.TE_im(point)
         return E[0],E[1]
 
@@ -458,7 +484,7 @@ class modes(object):
         E_axial = np.zeros([len(self.x),len(self.y)], dtype= np.complex)
         for i,xx in enumerate(self.x):
             for j,yy in enumerate(self.y):
-                point = Point(xx,yy)
+                point = df.Point(xx,yy)
                 E[i,j,:]     =  self.TE_re(point) + 1j*self.TE_im(point)
                 E_axial[i,j] =  self.TM_re(point) + 1j*self.TM_im(point)
         self.E = E
@@ -466,10 +492,12 @@ class modes(object):
         self.mode_field = np.transpose((np.abs(self.E[:,:,0])**2 + np.abs(self.E[:,:,1])**2+np.abs(self.E_axial[:,:])**2)**0.5)
         maxi = np.max(self.mode_field)
         self.mode_field /=maxi
-
+        self.E_vec = np.zeros([len(self.x),len(self.y),3],dtype=np.complex)
+        self.E_vec[:,:,:2] = E
+        self.E_vec[:,:,2] = E_axial
         return None    
 
-    def plot_electric_field(self,sp=10,scales = 500000,cont_scale=90,savefigs=False):
+    def plot_electric_field(self,sp=10,scales = 500000,cont_scale=90,savefigs = False):
 
         fig = plt.figure(figsize=(7.0, 7.0))
         xplot = self.x*1e6
@@ -484,7 +512,7 @@ class modes(object):
         plt.xlabel(r'$x(\mu m)$')
         plt.ylabel(r'$y(\mu m)$')
         #plt.title(r'mode$=$'+str(self.mode)+', '+'  $n_{eff}=$'+str(self.neff.real)+str(self.neff.imag)+'j')
-        if savefigs ==True:    
+        if savefigs == True:    
             plt.savefig('mode'+str(self.mode)+'.eps',bbox_inches ='tight')
         
             D = {}
