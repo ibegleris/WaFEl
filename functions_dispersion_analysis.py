@@ -12,7 +12,7 @@ import dolfin as df
 import time
 import matplotlib.tri as tri
 
-def gmesh_mesh_new(filename, a, b, r_core, r_clad,mesh_refinement, lamda, numlim, gmsh_ver='gmsh'):
+def gmesh_mesh_new(filename, a, b, r_core, r_clad, mesh_refinement, lamda, numlim, gmsh_ver='gmsh'):
     """
     A function built to reconfigure the geometry file for gmsh.
     Given the filename in the fenics_mesh folder it appends the
@@ -79,17 +79,37 @@ def plot_mesh(mesh,savefig = False,show = False):
         plt.show()
     return None
 
-class box_domain(object):
+class box_domains(object):
     def __init__(self,a,b):
         self.a = a
         self.b = b
 
-class waveguide_inputs(box_domain):
-    def __init__(self,lam,refr,exti):
+
+
+
+
+class waveguide_inputs(box_domains):
+    def __init__(self,lam,refr,exti,mu_r = 1):
         self.lamda = lam
         self.ref = refr
         self.extinction = exti
         self.k0 = 2*pi /self.lamda
+        self.mu_r = mu_r
+
+    def step_fibre(self,ncore,nclad):
+        self.ncore = ncore
+        self.nclad = nclad
+        return None
+    def fibre(self,r_core,r_clad,is_step_fibre,ncore = None,nclad = None):
+        self.r_core = r_core
+        self.r_clad = r_clad
+        self.is_fibre = True
+        self.is_step_fibre = is_step_fibre
+        if self.is_step_fibre == True:
+            self.step_fibre(ncore,nclad)
+
+        return None
+
     def geometry_plot(self,Npoints = 256):
         x = np.linspace(-self.a, self.a)
         y = np.linspace(-self.b, self.b)
@@ -116,12 +136,6 @@ class waveguide_inputs(box_domain):
                 ax2.axis('equal')
                 return n_plot,k_plot
 
-
-
-class eigen_parameters(object):
-    def __init__(self,num, neff_g):
-        self.num = num 
-        self.neff_g = neff_g
 
 
 
@@ -202,7 +216,7 @@ def strip_boundary(free_dofs,A):
 def function_space(vector_order,nodal_order,mesh):
     "Define the function spaces"
     
-    vector_space = df.FunctionSpace(mesh,"Nedelec 1st kind H(curl)",vector_order)
+    vector_space = df.FunctionSpace(mesh,"N1curl",vector_order)
     nodal_space = df.FunctionSpace(mesh,"Lagrange",nodal_order)
     combined_space = vector_space*nodal_space
     return combined_space
@@ -248,10 +262,11 @@ def Matrix_creation(mesh,mu_r,k,k0,ref,extinction = None,vector_order = 3,nodal_
     #assemble the system Matrices. If there is loss in the system then
     #we create a new set of matrixes and assemble them
 
-    A = df.assemble(A_ij)
-    B = df.assemble(B_ij)
+
     ####This is to try and introduce the complex part
     if k !=0:
+        A = df.assemble(A_ij)
+        B = df.assemble(B_ij)
         e_r_imag = epsilon_imag(extinction)
         A_ii_complex = e_r_imag*k0**2*df.inner(N_i,N_j)*df.dx
         B_ii_complex = e_r_imag*k0**2*df.inner(L_i,L_j)*df.dx
@@ -259,6 +274,9 @@ def Matrix_creation(mesh,mu_r,k,k0,ref,extinction = None,vector_order = 3,nodal_
         B_complex = df.assemble(B_ii_complex)
     else:
         A_complex, B_complex = None, None
+        A,B = df.PETScMatrix(),df.PETScMatrix()
+        df.assemble(A_ij, tensor=A)
+        df.assemble(B_ij, tensor=B)
     return combined_space, A,B, A_complex,B_complex
 
 
@@ -332,31 +350,25 @@ def integration2d_simps(xx,yy,integrand):
         I[i] = simps(integrand[i,:], yy)
     return simps(I,xx)
 
-def effective_area_simps(E,x,y):
-    integrand1 = (E[:,:,0].conjugate()*E[:,:,0] + E[:,:,1].conjugate()*E[:,:,1]).real   
-    Over = integration2d_simps(x,y,integrand1)
-        
-    integrand2 = integrand1**2
-    under = integration2d_simps(x,y,integrand2)
-        
-    return Over**2/under
 
-def effective_area_simps(E,E_axial,x,y):
-    integrand1 = np.conj(E[:,:,0])*E[:,:,0] + np.conj(E[:,:,1])*E[:,:,1] + np.conj(E_axial[:,:])*E_axial[:,:]    
-    Over = integration2d_simps(x,y,integrand1)
-        
-    integrand2 = np.abs(np.abs(E[:,:,0])**2 + np.abs(E[:,:,1])**2 + np.abs(E_axial[:,:])**2)**2
-    under = integration2d_simps(x,y,integrand2)
-        
-    return np.abs(Over)**2/under
 
-def overlap_simps(En,E_axialn,Em,E_axialm,x,y):
-    integrand1 = np.conjugate(En[:,:,0])*Em[:,:,0] + np.conjugate(En[:,:,1])*Em[:,:,1] + np.conjugate(E_axialn[:,:])*E_axialm[:,:]
+
+def overlap_simps(E1,E2):
+    """
+    Inputs two mode objects and returns the overlap integral of those two modes.
+    """
+    En = E1.E
+    Em = E2.E
+    Eaxialn = E1.E_axial
+    Eaxialm = E2.E_axial
+    x = E1.x
+    y = E1.y
+    integrand1 = np.conjugate(En[:,:,0])*Em[:,:,0] + np.conjugate(En[:,:,1])*Em[:,:,1] + np.conjugate(Eaxialn[:,:])*Eaxialm[:,:]
     Over = integration2d_simps(x,y,integrand1)
-    integrand2 = np.abs(En[:,:,0])**2 + np.abs(En[:,:,1])**2 + np.abs(E_axialn[:,:])**2
+    integrand2 = np.abs(En[:,:,0])**2 + np.abs(En[:,:,1])**2 + np.abs(Eaxialn[:,:])**2
     under1 = integration2d_simps(x,y,integrand2)
        
-    integrand3 = np.abs(Em[:,:,0])**2 + np.abs(Em[:,:,1])**2 + np.abs(E_axialm[:,:])**2
+    integrand3 = np.abs(Em[:,:,0])**2 + np.abs(Em[:,:,1])**2 + np.abs(Eaxialm[:,:])**2
     under2 = integration2d_simps(x,y,integrand3)
     
     return np.abs(Over)**2/(under1*under2)
@@ -415,7 +427,10 @@ class modes(object):
         self.E_axial = None
         self.E_vec = None
 
-    def dolfin_functions(self,k,A,ev,sort_index,free_dofs,combined_space):
+    def _dolfin_functions(self,A,ev,sort_index,free_dofs,combined_space):
+        """
+        Retruns the Dolfin functions by spliting the function space.
+        """
         #post-process the coefficients to map back to the full matrix
         coefficiants_global = np.zeros(A.size(0),dtype=np.complex)
         coefficiants_global[free_dofs] = ev[:,sort_index[self.mode_idx]]
@@ -435,38 +450,49 @@ class modes(object):
         self.TM_im = TM_im
         return None#TE_re,TE_re,TM_re,TM_im
 
-    def effective_area(self,k,A,ev,sort_index,free_dofs,combined_space,lim):
-        try:
-            temp = self.TE_re
-        except AttributeError:
-            self.dolfin_functions(k,A,ev,sort_index,free_dofs,combined_space)
-            pass
+    def effective_area(self,lim):
+        """
+        Computes the effective area of mode
+        """
         integrand1 = dblquad(self.Eabs2, -lim, lim, lambda x: -lim,lambda x: lim)
         integrand2 = dblquad(lambda y,x: self.Eabs2(y,x)**2, -lim, lim, lambda x: -lim,lambda x: lim)
         
         self.Aeff =  integrand1[0]**2/integrand2[0]
-
+        return None
 
     def Eabs2(self,y,x):
+        """
+        Returns the absolute square of the the electric field at a given point (y,x)
+        """
         E_ = self.Efun(y,x)
         return (E_[0]*E_[0].conjugate() + E_[1]*E_[1].conjugate()).real
+    
     def Efun(self,y,x):
+        """
+        Returns the absolute square of the the electric field at a given point (y,x)
+        """
         point = df.Point(x,y)
         E = self.TE_re(point)+1j*self.TE_im(point)
         return E[0],E[1]
 
+    def effective_area_simps(self):
+        """
+        Computes the effective area of a mode using simpsons rule.
+        """
 
-    def effective_area_simps(self,k,A,ev,sort_index,free_dofs,combined_space):
         if self.E ==None:
-            self.electric_field_full(k,A,ev,sort_index,free_dofs,combined_space)
+            raise "interpolate before calculating"
         
-        integrand1 = (self.E[:,:,0].conjugate()*self.E[:,:,0] + self.E[:,:,1].conjugate()*self.E[:,:,1]).real   
+        integrand1 = (self.E[:,:,0].conjugate()*self.E[:,:,0] + self.E[:,:,1].conjugate()*self.E[:,:,1]).real +\
+                        self.E_axial[:,:].conjugate()*self.E_axial[:,:]  
         Over = integration2d_simps(self.x,self.y,integrand1)
             
-        integrand2 = integrand1**2
+        integrand2 = np.abs(np.abs(self.E[:,:,0])**2 + np.abs(self.E[:,:,1])**2 + np.abs(self.E_axial[:,:])**2)**2
         under = integration2d_simps(self.x,self.y,integrand2)
         self.Aeff = Over**2/under    
         return Over**2/under
+
+
     def electric_field_full(self,k,A,ev,sort_index,free_dofs,combined_space):
         """
         Releases the electric field from the calculated eigenvalus and eigen vectors
@@ -477,7 +503,7 @@ class modes(object):
         try:
             temp = self.TE_re
         except AttributeError:
-            self.dolfin_functions(k,A,ev,sort_index,free_dofs,combined_space)
+            self._dolfin_functions(A,ev,sort_index,free_dofs,combined_space)
             pass
         
         E = np.zeros([len(self.x),len(self.y),2],dtype = np.complex)
@@ -526,3 +552,47 @@ class modes(object):
             D['sp'] = sp
             savemat('mode'+str(self.mode)+'.mat',D)
         return None
+
+
+def main(box_domain, waveguide,vector_order,nodal_order,num,neff_g,lam_mult, gmesh_mesh_new = gmesh_mesh_new,k = 1,size1 = 512,size2 = 512, mesh_plot = False,filename = 'geometry_test.geo',mesh_refinement=False,mesh = None):
+    if mesh == None:
+        if waveguide.is_fibre:
+            mesh = gmesh_mesh_new(filename, box_domain.a, box_domain.b, waveguide.r_core, waveguide.r_clad,mesh_refinement, waveguide.lamda, lam_mult)
+        else:
+            sys.exit("No configuration for other waveguides except fibres. Will be done at some point but feel free to change the \n gmesh_mesh_new to your needs.")
+        
+        if mesh_plot:
+            plot_mesh(mesh,'mesh.png',True)
+            print("Now you have seen the mesh run again withought the ploting for  the calculation")
+            return mesh
+    combined_space, A, B, A_complex, B_complex = Matrix_creation(mesh,waveguide.mu_r,k,waveguide.k0,waveguide.ref,
+                                                               waveguide.extinction,vector_order,nodal_order)
+    A, B, A_complex, B_complex, electric_wall = Mirror_boundary(mesh,combined_space,A,B,A_complex,B_complex,k)
+
+    free_dofs = boundary_marker_locator(A,electric_wall)
+    A_np, B_np = dolfin_to_eigs(A,B,A_complex,B_complex,k,free_dofs)
+    eigen, ev = scipy_sparse_eigensolver(A_np,B_np,neff_g,num,waveguide.k0)
+    beta =1j*(eigen)**0.5 
+    beta = np.abs(np.real(beta)) -1j*np.imag(beta)
+    sort_index = np.argsort(beta.imag)[::-1]
+    if waveguide.is_step_fibre ==True:
+        propagating_modes = np.where(((beta[sort_index]/waveguide.k0).real>waveguide.nclad.real) \
+                                 & ((beta[sort_index]/waveguide.k0).real<waveguide.ncore))
+        propagating_modes = propagating_modes[0][:]
+    else:
+        print("Warning: There could be surplus modes. Manual examination is advised.")
+        propagating_modes = sort_index
+    
+    neff = beta[sort_index][propagating_modes]/waveguide.k0
+    print("The effective index of the most dominant modes are:")
+    print(neff)
+    if waveguide.is_fibre == True:
+        min_max = (-3*waveguide.r_core,3*waveguide.r_core,-3*waveguide.r_core,3*waveguide.r_core)
+    else:
+        min_max = box_domain.a, box_domain.b
+    print("\n \n  Calculating the electric field of the modes...")
+    modes_vec = []
+    for i in range(len(propagating_modes)):
+        modes_vec.append(modes(i,size1,size2,min_max,propagating_modes,beta,sort_index,waveguide.k0))
+        modes_vec[i].electric_field_full(k,A,ev,sort_index,free_dofs,combined_space)
+    return tuple(modes_vec)+(mesh,)
