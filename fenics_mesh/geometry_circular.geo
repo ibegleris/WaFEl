@@ -1,9 +1,9 @@
 a = DefineNumber[ 0.0002, Name "Parameters/a" ];
 b = DefineNumber[ 0.0002, Name "Parameters/b" ];
-rcore = DefineNumber[ 1.8e-05, Name "Parameters/rcore" ];
-rclad = DefineNumber[ 0.0001, Name "Parameters/rclad" ];
-numlim = DefineNumber[ 1, Name "Parameters/numlim" ];
-lam = DefineNumber[ 1.55e-06, Name "Parameters/lam" ];
+rcore = DefineNumber[ 1e-5, Name "Parameters/rcore" ];
+rclad = DefineNumber[ 10e-5, Name "Parameters/rclad" ];
+numlim = DefineNumber[ 0.25., Name "Parameters/numlim" ];
+lam = DefineNumber[ 1.55e-6, Name "Parameters/lam" ];
 elmin = DefineNumber[ numlim*lam, Name "Parameters/elmin" ];
 sqrt2 = DefineNumber[ 0.7071067811865476, Name "Parameters/sqrt2" ];
 elminclad = DefineNumber[ 70*numlim*lam, Name "Parameters/elminclad" ];

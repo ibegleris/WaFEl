@@ -1,11 +1,7 @@
-
 # coding: utf-8
 
 # # Single mode fibre
 # This uses the theoretical result of the single mode optical fibre in order to form a point of comparison to the Fenics solver. 
-
-# In[5]:
-
 from __future__ import division,print_function
 import numpy as np
 import matplotlib.pylab as plt
@@ -14,8 +10,6 @@ from scipy.special import jv,kv
 from scipy.optimize import fsolve
 from math import atan
 from scipy.integrate import dblquad
-
-
 
 def system(vec,V,Delta):
 
@@ -26,6 +20,7 @@ def system(vec,V,Delta):
     first = u**2+w**2 - V**2
     second = jv(0,u)/u/jv(1,u) - (1-Delta)*kv(0,w)/w/kv(1,w)
     return np.real(first), np.imag(first),np.real(second), np.imag(second)
+
 
 def sigma(u,w,V,Delta):
     return -1 - u**2 * w**2 * Delta * jv(0,u)/(V**2 * u * jv(1,u))
@@ -42,6 +37,8 @@ def cart_to_cyl(x,y,z):
     except ZeroDivisionError:
         
         return (x**2 + y**2)**0.5, atan(np.inf),z
+
+
 def electric_field(x,y,u,w,beta,a,V,psi,n,Delta):
     n+=1
     r,theta,z = cart_to_cyl(x,y,0)
@@ -71,18 +68,18 @@ def plot_electric(x,y,u,w,beta,a,V,Delta):
     plt.show()
     return 0
 
+
 def I(y,x,u,w,beta,a,V,psi,n,po,Delta):
     ex,ey,ez = electric_field(x,y,u,w,beta,a,V,psi,n,Delta)
     return np.abs(np.abs(ex)**2 +np.abs(ex)**2 + np.abs(ex)**2)**po
 
 
 def effective_area(a,u,w,beta,V,n,Delta,r_clad):
+    
     top = dblquad(I,-r_clad,r_clad,lambda x : -r_clad,lambda x: r_clad,args = (u,w,beta,a,V,0,n,1,Delta))
     bottom = dblquad(I,-r_clad,r_clad,lambda x : -r_clad,lambda x: r_clad,args = (u,w,beta,a,V,0,n,2,Delta))
     A_eff = top[0]**2/bottom[0]
     return A_eff    
-
-
 
 
 def main_test(n1,n0,lamda,a,r_clad,guess = [1,1,1,1],plot = False):
@@ -95,6 +92,7 @@ def main_test(n1,n0,lamda,a,r_clad,guess = [1,1,1,1],plot = False):
     u = ur + 1j*ui
     w = wr + 1j*wi
     neff = (((n1/u)**2 + (n0/w)**2)/((1/u)**2 + (1/w)**2))**0.5
+    print(neff)
     beta = neff*2*pi/lamda
     #x = np.linspace(-2*a,2*a,512)
     #y = np.linspace(-2*a,2*a,512)
@@ -103,8 +101,6 @@ def main_test(n1,n0,lamda,a,r_clad,guess = [1,1,1,1],plot = False):
 
     Aeff = effective_area(a,u,w,beta,V,0,Delta,r_clad)
     return neff,Aeff
-
-
 
 
 if __name__ == '__main__':

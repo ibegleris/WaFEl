@@ -1,4 +1,4 @@
-from __future__ import division#, print_function
+from __future__ import division, print_function
 import numpy as np
 from scipy.constants import c,pi
 from scipy.sparse.linalg import eigs, eigsh
@@ -96,17 +96,17 @@ class waveguide_inputs(box_domains):
         self.k0 = 2*pi /self.lamda
         self.mu_r = mu_r
 
-    def step_fibre(self,ncore,nclad):
+    def step_fibre(self,ncore,nclad,r_core,r_clad):
         self.ncore = ncore
         self.nclad = nclad
-        return None
-    def fibre(self,r_core,r_clad,is_step_fibre,ncore = None,nclad = None):
         self.r_core = r_core
         self.r_clad = r_clad
+        return None
+    def fibre(self,is_step_fibre,r_core=None,r_clad=None,ncore = None,nclad = None):
         self.is_fibre = True
         self.is_step_fibre = is_step_fibre
         if self.is_step_fibre == True:
-            self.step_fibre(ncore,nclad)
+            self.step_fibre(ncore,nclad,r_core,r_clad)
 
         return None
 
@@ -242,7 +242,7 @@ def Matrix_creation(mesh,mu_r,k,k0,ref,extinction = None,vector_order = 3,nodal_
     (N_i,L_i) = df.TestFunctions(combined_space)
     (N_j,L_j) = df.TrialFunctions(combined_space)
     e_r_real = epsilon_real(ref)
-    
+
     s_tt_ij = 1.0/mu_r*df.inner(df.curl(N_i),df.curl(N_j))
     t_tt_ij = e_r_real*df.inner(N_i,N_j)
     s_zz_ij = (1.0/mu_r) * df.inner(df.grad(L_i),df.grad(L_j))
@@ -318,8 +318,8 @@ def find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_=1
                 B_np = strip_boundary(free_dofs,B)
             sparse_ = False
         except MemoryError:
-            print "*****************The matrixes are way to large for this system.*****************"
-            print "*********************The sparse Matrixes will now be tried**********************"
+            print("*****************The matrixes are way to large for this system.*****************")
+            print("*********************The sparse Matrixes will now be tried**********************")
             sparse_ = True
             pass
 
@@ -333,7 +333,7 @@ def find_eigenvalues(A,B,A_complex,B_complex,neff_g,num,k0,free_dofs,k,sparse_=1
             del A_np_complex,B_np_complex
         A_np = A_np[free_dofs,:][:,free_dofs]
         B_np = B_np[free_dofs,:][:,free_dofs]
-        print "sparse eigenvalue time"
+        print("sparse eigenvalue time")
         eigen, ev = scipy_sparse_eigensolver(dot_sparse(conj_trans(B_np),A_np),dot_sparse(conj_trans(B_np),B_np),neff_g,num,k0)
     else:
         print("normal eigenvalue solver ")
@@ -554,7 +554,7 @@ class modes(object):
         return None
 
 
-def main(box_domain, waveguide,vector_order,nodal_order,num,neff_g,lam_mult, gmesh_mesh_new = gmesh_mesh_new,k = 1,size1 = 512,size2 = 512, mesh_plot = False,filename = 'geometry_test.geo',mesh_refinement=False,mesh = None):
+def main(box_domain, waveguide,vector_order,nodal_order,num,neff_g,lam_mult,min_max = None, gmesh_mesh_new = gmesh_mesh_new,k = 1,size1 = 512,size2 = 512, mesh_plot = False,filename = 'geometry_test.geo',mesh_refinement=False,mesh = None):
     if mesh == None:
         if waveguide.is_fibre:
             mesh = gmesh_mesh_new(filename, box_domain.a, box_domain.b, waveguide.r_core, waveguide.r_clad,mesh_refinement, waveguide.lamda, lam_mult)
@@ -565,13 +565,21 @@ def main(box_domain, waveguide,vector_order,nodal_order,num,neff_g,lam_mult, gme
             plot_mesh(mesh,'mesh.png',True)
             print("Now you have seen the mesh run again withought the ploting for  the calculation")
             return mesh
+    print("assembling FEniCS matrixes.........",)
     combined_space, A, B, A_complex, B_complex = Matrix_creation(mesh,waveguide.mu_r,k,waveguide.k0,waveguide.ref,
                                                                waveguide.extinction,vector_order,nodal_order)
+    print("OK\n")
+    
+    print("Applying Boundary conditions.........",)
     A, B, A_complex, B_complex, electric_wall = Mirror_boundary(mesh,combined_space,A,B,A_complex,B_complex,k)
-
     free_dofs = boundary_marker_locator(A,electric_wall)
+    print("OK \n")
+    print("converting to Scipy CSR Matrixes.........",)
     A_np, B_np = dolfin_to_eigs(A,B,A_complex,B_complex,k,free_dofs)
+    print("OK \n")
+    print("Solving for eigenvalues, this may take some time........")
     eigen, ev = scipy_sparse_eigensolver(A_np,B_np,neff_g,num,waveguide.k0)
+    print("OK \n")
     beta =1j*(eigen)**0.5 
     beta = np.abs(np.real(beta)) -1j*np.imag(beta)
     sort_index = np.argsort(beta.imag)[::-1]
@@ -580,19 +588,22 @@ def main(box_domain, waveguide,vector_order,nodal_order,num,neff_g,lam_mult, gme
                                  & ((beta[sort_index]/waveguide.k0).real<waveguide.ncore))
         propagating_modes = propagating_modes[0][:]
     else:
-        print("Warning: There could be surplus modes. Manual examination is advised.")
+        print("Warning: There could be many spurious modes. Manual examination is advised.")
         propagating_modes = sort_index
     
     neff = beta[sort_index][propagating_modes]/waveguide.k0
     print("The effective index of the most dominant modes are:")
     print(neff)
     if waveguide.is_fibre == True:
-        min_max = (-3*waveguide.r_core,3*waveguide.r_core,-3*waveguide.r_core,3*waveguide.r_core)
+        if min_max == None:
+            min_max = (-3*waveguide.r_core,3*waveguide.r_core,-3*waveguide.r_core,3*waveguide.r_core)
     else:
-        min_max = box_domain.a, box_domain.b
-    print("\n \n  Calculating the electric field of the modes...")
+        min_max = (-box_domain.a, box_domain.a,-box_domain.b, box_domain.b)
+    print("\n \n  Calculating the electric field of the modes.......")
     modes_vec = []
     for i in range(len(propagating_modes)):
+        print("Interpolating mode:", i)
         modes_vec.append(modes(i,size1,size2,min_max,propagating_modes,beta,sort_index,waveguide.k0))
         modes_vec[i].electric_field_full(k,A,ev,sort_index,free_dofs,combined_space)
+    print("Done")
     return tuple(modes_vec)+(mesh,)

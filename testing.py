@@ -1,17 +1,8 @@
 from functions_dispersion_analysis import *
 from testing.Single_mode_fibre.Single_mode_theoretical import *
-def test_main():
+def main_t(a,b,lamda,r_core,r_clad,ncore,nclad,neff_g,num,lam_mult,mesh_refinement,ref,extinction):
 	mu_r = 1.0
-	lamda = 1.55e-6
-	r_core = 1e-5 # radius of core
-	r_clad = 10e-5 #radius of the fibre
-	nclad = 1.444#- 0.1e-4j# ref index of cladding
-	ncore = 1.445# - 1e-4j # ref index of core
-	neff_g = ncore # Guess of the modes
-	num = 20   #The number of modes guess 
-
-	lam_mult = 1 # Asks GMSH to create a mesh that has this number multiplied by the wavelength 
-	mesh_refinement = 0 # number of times to uniformly refine the mesh (used for convergence plots and better results)
+	
 	vector_order = 3
 	nodal_order = 3
 	neff_th, Aeff_th = main_test(ncore,nclad,lamda,r_core,r_clad)
@@ -27,6 +18,42 @@ def test_main():
 	modes_vec =modes_vec[:-1]
 	for mode in modes_vec:
 		abs_err_neff = np.abs(neff_th - mode.neff).real
-		abs_err_aeff = 
-	    assert np.abs(neff_th - mode.neff).real <= 1e-6
-	    assert np.abs(neff_th - mode.neff).imag <= 1e-6
+		assert np.abs(neff_th - mode.neff).real <= 1e-6
+		assert np.abs(neff_th - mode.neff).imag <= 1e-6
+
+def ref_single_step(x,values = np.zeros(1)):
+    point = (x[0]**2+ x[1]**2)**0.5
+    if  point<= r_core:
+        values[0] = ncore.real**2 - ncore.imag**2
+    elif point > r_core and point <= r_clad:
+        values[0] = nclad.real**2 - nclad.imag**2
+    else:
+        values[0] = 1.
+    return values
+
+def extinction_single_step(x,values = np.zeros(1)):
+    point = (x[0]**2+ x[1]**2)**0.5
+    if  point<= r_core:
+        values[0] = -2*ncore.imag*ncore.real
+    elif point > r_core and point <= r_clad:
+        values[0] = -2*nclad.imag*ncore.real
+    else:
+        values[0] = 0
+    return values
+
+def test_single_mode_real():
+	lamda = 1.55e-6
+	r_core = 1e-5 
+	r_clad = 10e-5 
+	nclad = 1.444
+	ncore = 1.445
+	neff_g = ncore
+	num = 20
+	a = 2e-4
+	b = 2e-4
+	lam_mult = 1
+	mesh_refinement = 0
+	main_t(a,b,lamda,r_core,r_clad,ncore,nclad,neff_g,
+			num,lam_mult,mesh_refinement,ref_single_step,extinction_single_step)
+if __name__ == '__main__':
+	test_single_mode_real()
