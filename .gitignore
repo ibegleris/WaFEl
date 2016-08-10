@@ -1,3 +1,4 @@
+beamimpedanc2d
 figures/
 figures/*
 *.h
@@ -19,3 +20,5 @@ misc/*
 *_checkpoints
 convergence*
 .ipynb_checkpoints
+__pycache__
+.cache
