@@ -1,7 +1,7 @@
-a = DefineNumber[ 0.0002, Name "Parameters/a" ];
-b = DefineNumber[ 0.0002, Name "Parameters/b" ];
-rcore = DefineNumber[ 1.8e-05, Name "Parameters/rcore" ];
-rclad = DefineNumber[ 0.0001, Name "Parameters/rclad" ];
+a = DefineNumber[ 0.0001, Name "Parameters/a" ];
+b = DefineNumber[ 0.0001, Name "Parameters/b" ];
+rcore = DefineNumber[ 2e-06, Name "Parameters/rcore" ];
+rclad = DefineNumber[ 5e-05, Name "Parameters/rclad" ];
 numlim = DefineNumber[ 1, Name "Parameters/numlim" ];
 lam = DefineNumber[ 1.55e-06, Name "Parameters/lam" ];
 elmin = DefineNumber[ numlim*lam, Name "Parameters/elmin" ];
