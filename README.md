@@ -1,4 +1,4 @@
-# optical_fibres_fenics
-This code is set to solve Maxwells equations and finding the modes of a waveguide using using the Fenics/dolfin Python API.
+# Waveguide Finite Element Analysis
+This repository is dedicated to solving Maxwells equations and fininding the modes of a waveguide using FEniCS as a finite element assembler.
 
-The main development will continue in the Jupyter notebook until I believe it is ready for use. 
+The main development is done within the Jupyter notebook.
